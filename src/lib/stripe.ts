@@ -1,13 +1,13 @@
 import Stripe from 'stripe';
 
-// Initialize Stripe with the secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-03-31.basil', // Updated based on TS error for Stripe v18
-});
+// Stripe initialization will happen inside each function
 
 // Create a payment intent
 export const createPaymentIntent = async (amount: number, currency: string = 'aud', metadata: Stripe.MetadataParam = {}) => {
   try {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+      apiVersion: '2025-03-31.basil',
+    });
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
       currency,
@@ -27,6 +27,9 @@ export const createPaymentIntent = async (amount: number, currency: string = 'au
 // Retrieve a payment intent
 export const retrievePaymentIntent = async (paymentIntentId: string) => {
   try {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+      apiVersion: '2025-03-31.basil',
+    });
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
     return { paymentIntent, error: null };
   } catch (error) {
@@ -43,6 +46,9 @@ export const createCheckoutSession = async (
   metadata: Stripe.MetadataParam = {}
 ) => {
   try {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+      apiVersion: '2025-03-31.basil',
+    });
     const session = await stripe.checkout.sessions.create({
       line_items: [
         {
@@ -66,6 +72,9 @@ export const createCheckoutSession = async (
 // Create a product
 export const createProduct = async (name: string, description: string) => {
   try {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+      apiVersion: '2025-03-31.basil',
+    });
     const product = await stripe.products.create({
       name,
       description,
@@ -81,6 +90,9 @@ export const createProduct = async (name: string, description: string) => {
 // Create a price
 export const createPrice = async (productId: string, amount: number, currency: string = 'aud') => {
   try {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+      apiVersion: '2025-03-31.basil',
+    });
     const price = await stripe.prices.create({
       product: productId,
       unit_amount: Math.round(amount * 100), // Convert to cents
