@@ -104,3 +104,5 @@ export async function POST(request: NextRequest) {
       { message: 'An unexpected error occurred during payment creation.' },
       { status: 500 }
     );
+  }
+} // <-- This closing brace was missing in the previous version
