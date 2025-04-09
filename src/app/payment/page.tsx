@@ -1,13 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react'; // Import Suspense
 import { useRouter, useSearchParams } from 'next/navigation';
-import { updateFormulation } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
+import { Database } from '@/lib/database.types';
 
-export default function PaymentPage() {
+type Formulation = Database['public']['Tables']['formulations']['Row'];
+
+// Define the loading fallback component
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Loading payment details...</p>
+      </div>
+    </div>
+  );
+}
+
+// Component containing the main logic using useSearchParams
+function PaymentContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [formulation, setFormulation] = useState<any>(null);
+  const [formulation, setFormulation] = useState<Formulation | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   
   const router = useRouter();
@@ -52,8 +68,14 @@ export default function PaymentPage() {
         
         const paymentData = await paymentResponse.json();
         setClientSecret(paymentData.clientSecret);
-      } catch (err: any) {
-        setError(err.message || 'An error occurred');
+      } catch (err: unknown) {
+        let message = 'An error occurred';
+        if (err instanceof Error) {
+          message = err.message;
+        } else if (typeof err === 'string') {
+          message = err;
+        }
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -64,15 +86,26 @@ export default function PaymentPage() {
 
   const handlePaymentSuccess = async () => {
     try {
-      // Update formulation payment status
-      await updateFormulation(formulationId!, {
-        payment_status: 'paid',
-      });
+      // Update formulation payment status using the supabase client
+      const { error: updateError } = await supabase
+        .from('formulations') // Assuming the table name is 'formulations'
+        .update({ payment_status: 'paid' })
+        .eq('id', formulationId); // Assuming the primary key is 'id'
+
+      if (updateError) {
+        throw updateError;
+      }
       
       // Redirect to success page
       router.push(`/payment/success?formulationId=${formulationId}`);
-    } catch (err: any) {
-      setError(err.message || 'Failed to update payment status');
+    } catch (err: unknown) {
+      let message = 'Failed to update payment status';
+      if (err instanceof Error) {
+        message = err.message;
+      } else if (typeof err === 'string') {
+        message = err;
+      }
+      setError(message);
     }
   };
 
@@ -167,5 +200,14 @@ export default function PaymentPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Default export wraps PaymentContent in Suspense
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <PaymentContent />
+    </Suspense>
   );
 }

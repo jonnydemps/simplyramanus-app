@@ -2,11 +2,11 @@ import Stripe from 'stripe';
 
 // Initialize Stripe with the secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2023-10-16', // Use the latest API version
+  apiVersion: '2025-03-31.basil', // Updated based on TS error for Stripe v18
 });
 
 // Create a payment intent
-export const createPaymentIntent = async (amount: number, currency: string = 'aud', metadata: any = {}) => {
+export const createPaymentIntent = async (amount: number, currency: string = 'aud', metadata: Stripe.MetadataParam = {}) => {
   try {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
@@ -40,7 +40,7 @@ export const createCheckoutSession = async (
   priceId: string,
   successUrl: string,
   cancelUrl: string,
-  metadata: any = {}
+  metadata: Stripe.MetadataParam = {}
 ) => {
   try {
     const session = await stripe.checkout.sessions.create({

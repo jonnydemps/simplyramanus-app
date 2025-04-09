@@ -1,9 +1,8 @@
-export default function PaymentSuccessPage({ 
-  searchParams 
-}: { 
-  searchParams: { formulationId: string } 
-}) {
-  const formulationId = searchParams.formulationId;
+import Link from 'next/link'; // Import Link
+
+// Removed unused searchParams prop
+export default function PaymentSuccessPage() {
+  // const formulationId = searchParams.formulationId; // Removed unused variable
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -43,12 +42,12 @@ export default function PaymentSuccessPage({
         </div>
         
         <div className="flex justify-center">
-          <a 
-            href="/dashboard" 
+          <Link
+            href="/dashboard"
             className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             Go to Dashboard
-          </a>
+          </Link>
         </div>
       </div>
     </div>

@@ -1,3 +1,5 @@
+import Link from 'next/link'; // Import Link
+
 export default function SignupConfirmationPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -17,10 +19,10 @@ export default function SignupConfirmationPage() {
             A confirmation link has been sent to your email address. Please click on the link to verify your account.
           </p>
           <p className="text-sm text-gray-600">
-            If you don't receive an email within a few minutes, please check your spam folder or{' '}
-            <a href="/signin" className="text-blue-600 hover:underline">
+            If you don&apos;t receive an email within a few minutes, please check your spam folder or{' '}
+            <Link href="/signin" className="text-blue-600 hover:underline">
               return to sign in
-            </a>
+            </Link>
           </p>
         </div>
       </div>

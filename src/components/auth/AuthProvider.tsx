@@ -1,66 +1,120 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getCurrentUser, signOut } from '@/lib/supabase';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { Session, User } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 
-export default function AuthProvider({ 
-  children 
-}: { 
-  children: React.ReactNode 
-}) {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+type Profile = {
+  id: string;
+  user_id: string;
+  company_name: string;
+  is_admin: boolean;
+  created_at: string;
+};
+
+type AuthContextType = {
+  user: User | null;
+  session: Session | null;
+  profile: Profile | null;
+  signOut: () => Promise<void>;
+  isLoading: boolean;
+};
+
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  session: null,
+  profile: null,
+  signOut: async () => {},
+  isLoading: true,
+});
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Check for current user on component mount
-    const checkUser = async () => {
+    const getSession = async () => {
+      setIsLoading(true);
       try {
-        const currentUser = await getCurrentUser();
-        setUser(currentUser || null);
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          throw error;
+        }
+        
+        if (session) {
+          setSession(session);
+          setUser(session.user);
+          
+          // Fetch user profile
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .single();
+            
+          if (profileError) {
+            console.error('Error fetching profile:', profileError);
+          } else {
+            setProfile(profileData);
+          }
+        }
       } catch (error) {
-        console.error('Error checking authentication:', error);
+        console.error('Error getting session:', error);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
-    checkUser();
+    getSession();
 
-    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
         if (session?.user) {
-          setUser(session.user);
+          // Fetch user profile when auth state changes
+          supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .single()
+            .then(({ data, error }) => {
+              if (error) {
+                console.error('Error fetching profile:', error);
+              } else {
+                setProfile(data);
+              }
+            });
         } else {
-          setUser(null);
+          setProfile(null);
         }
-        setLoading(false);
+        
+        router.refresh();
       }
     );
 
-    // Clean up subscription on unmount
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [router]);
 
-  const handleSignOut = async () => {
-    await signOut();
+  const signOut = async () => {
+    await supabase.auth.signOut();
     router.push('/signin');
   };
 
-  // Create an auth context value
-  const value = {
-    user,
-    loading,
-    signOut: handleSignOut,
-  };
-
   return (
-    <div>
+    <AuthContext.Provider value={{ user, session, profile, signOut, isLoading }}>
       {children}
-    </div>
+    </AuthContext.Provider>
   );
-}
+};
+
+export const useAuth = () => {
+  return useContext(AuthContext);
+};

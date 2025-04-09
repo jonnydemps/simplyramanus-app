@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 
 // Initialize Stripe with the secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-03-31.basil', // Updated based on TS error for Stripe v18
 });
 
 export async function POST(request: NextRequest) {
@@ -22,8 +22,14 @@ export async function POST(request: NextRequest) {
         signature,
         process.env.STRIPE_WEBHOOK_SECRET || ''
       );
-    } catch (err: any) {
-      console.error('Webhook signature verification failed:', err.message);
+    } catch (err: unknown) {
+      let message = 'Unknown error';
+      if (err instanceof Error) {
+        message = err.message;
+      } else if (typeof err === 'string') {
+        message = err;
+      }
+      console.error('Webhook signature verification failed:', message);
       return NextResponse.json(
         { message: 'Webhook signature verification failed' },
         { status: 400 }
@@ -31,7 +37,8 @@ export async function POST(request: NextRequest) {
     }
     
     // Handle the event
-    const { success, paymentIntent } = await handleWebhookEvent(event);
+    // The 'success' variable is not used, so omit it
+    const { paymentIntent } = await handleWebhookEvent(event);
     
     if (event.type === 'payment_intent.succeeded' && paymentIntent) {
       // Update formulation payment status

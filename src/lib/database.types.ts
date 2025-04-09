@@ -9,236 +9,105 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
-      profiles: {
-        Row: {
-          id: string
-          company_name: string
-          contact_name: string | null
-          contact_email: string
-          phone: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id: string
-          company_name: string
-          contact_name?: string | null
-          contact_email: string
-          phone?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          company_name?: string
-          contact_name?: string | null
-          contact_email?: string
-          phone?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
       formulations: {
         Row: {
           id: string
-          user_id: string
-          name: string
-          description: string | null
-          product_type: string
-          status: string
-          original_file_name: string
-          file_path: string
-          report_path: string | null
-          payment_status: string
-          payment_id: string | null
           created_at: string
           updated_at: string
+          name: string
+          product_type: string
+          user_id: string
+          status: string
+          payment_status: string
+          report_url: string | null
+          comments: Json | null
         }
         Insert: {
           id?: string
-          user_id: string
-          name: string
-          description?: string | null
-          product_type: string
-          status?: string
-          original_file_name: string
-          file_path: string
-          report_path?: string | null
-          payment_status?: string
-          payment_id?: string | null
           created_at?: string
           updated_at?: string
+          name: string
+          product_type: string
+          user_id: string
+          status?: string
+          payment_status?: string
+          report_url?: string | null
+          comments?: Json | null
         }
         Update: {
           id?: string
-          user_id?: string
-          name?: string
-          description?: string | null
-          product_type?: string
-          status?: string
-          original_file_name?: string
-          file_path?: string
-          report_path?: string | null
-          payment_status?: string
-          payment_id?: string | null
           created_at?: string
           updated_at?: string
+          name?: string
+          product_type?: string
+          user_id?: string
+          status?: string
+          payment_status?: string
+          report_url?: string | null
+          comments?: Json | null
         }
       }
       ingredients: {
         Row: {
           id: string
-          inci_name: string
+          created_at: string
+          name: string
           cas_number: string | null
           function: string | null
-          max_concentration: number | null
-          restrictions: string | null
-          notes: string | null
-          created_at: string
-          updated_at: string
+          concentration: number
+          formulation_id: string
         }
         Insert: {
           id?: string
-          inci_name: string
+          created_at?: string
+          name: string
           cas_number?: string | null
           function?: string | null
-          max_concentration?: number | null
-          restrictions?: string | null
-          notes?: string | null
-          created_at?: string
-          updated_at?: string
+          concentration: number
+          formulation_id: string
         }
         Update: {
           id?: string
-          inci_name?: string
+          created_at?: string
+          name?: string
           cas_number?: string | null
           function?: string | null
-          max_concentration?: number | null
-          restrictions?: string | null
-          notes?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      formulation_ingredients: {
-        Row: {
-          id: string
-          formulation_id: string
-          ingredient_id: string
-          concentration: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          formulation_id: string
-          ingredient_id: string
-          concentration: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          formulation_id?: string
-          ingredient_id?: string
           concentration?: number
-          created_at?: string
-          updated_at?: string
+          formulation_id?: string
         }
       }
-      comments: {
+      profiles: {
         Row: {
           id: string
-          formulation_id: string
-          user_id: string
-          content: string
           created_at: string
-          updated_at: string
+          user_id: string
+          company_name: string
+          is_admin: boolean
         }
         Insert: {
           id?: string
-          formulation_id: string
-          user_id: string
-          content: string
           created_at?: string
-          updated_at?: string
+          user_id: string
+          company_name: string
+          is_admin?: boolean
         }
         Update: {
           id?: string
-          formulation_id?: string
+          created_at?: string
           user_id?: string
-          content?: string
-          created_at?: string
-          updated_at?: string
+          company_name?: string
+          is_admin?: boolean
         }
       }
-      reports: {
-        Row: {
-          id: string
-          formulation_id: string
-          reviewer_id: string
-          status: string
-          summary: string
-          details: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          formulation_id: string
-          reviewer_id: string
-          status: string
-          summary: string
-          details?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          formulation_id?: string
-          reviewer_id?: string
-          status?: string
-          summary?: string
-          details?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      payments: {
-        Row: {
-          id: string
-          user_id: string
-          formulation_id: string
-          amount: number
-          currency: string
-          stripe_payment_id: string
-          status: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          formulation_id: string
-          amount: number
-          currency?: string
-          stripe_payment_id: string
-          status: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          formulation_id?: string
-          amount?: number
-          currency?: string
-          stripe_payment_id?: string
-          status?: string
-          created_at?: string
-          updated_at?: string
-        }
-      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
     }
   }
 }

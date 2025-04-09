@@ -1,40 +1,43 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from './lib/supabase';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 
-// Define which routes should be protected (require authentication)
-const protectedRoutes = ['/dashboard', '/formulations', '/profile', '/admin'];
-
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
   
-  // Check if the requested path is a protected route
-  const isProtectedRoute = protectedRoutes.some(route => 
-    pathname.startsWith(route)
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (name) => req.cookies.get(name)?.value,
+        set: (name, value, options) => {
+          res.cookies.set({ name, value, ...options });
+        },
+        remove: (name, options) => {
+          res.cookies.set({ name, value: '', ...options });
+        },
+      },
+    }
   );
   
-  if (isProtectedRoute) {
-    // Get the session from Supabase
-    const session = await getSession();
-    
-    // If no session exists, redirect to the sign-in page
-    if (!session) {
-      const signInUrl = new URL('/signin', request.url);
-      signInUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(signInUrl);
-    }
-    
-    // For admin routes, check if user has admin role
-    if (pathname.startsWith('/admin')) {
-      // This would be implemented when we set up the database schema
-      // For now, we'll just check if the user's email contains 'admin'
-      const isAdmin = session.user.email?.includes('admin');
-      
-      if (!isAdmin) {
-        // Redirect non-admin users to dashboard
-        return NextResponse.redirect(new URL('/dashboard', request.url));
-      }
-    }
-  }
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  // If no session and trying to access protected routes
+  const isAuthRoute = req.nextUrl.pathname.startsWith('/signin') || 
+                      req.nextUrl.pathname.startsWith('/signup') || 
+                      req.nextUrl.pathname.startsWith('/reset-password');
   
-  return NextResponse.next();
+  if (!session && !isAuthRoute && req.nextUrl.pathname !== '/') {
+    const redirectUrl = new URL('/signin', req.url);
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  return res;
 }
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/webhooks).*)'],
+};

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createFormulation } from '@/lib/supabase';
+// Removed unused import: import { createFormulation } from '@/lib/supabase';
 
 export default function FormulationUpload() {
   const [file, setFile] = useState<File | null>(null);
@@ -80,8 +80,14 @@ export default function FormulationUpload() {
       
       // Redirect to payment page with the formulation ID
       router.push(`/payment?formulationId=${data.id}`);
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload formulation');
+    } catch (err: unknown) {
+      let message = 'Failed to upload formulation';
+      if (err instanceof Error) {
+        message = err.message;
+      } else if (typeof err === 'string') {
+        message = err;
+      }
+      setError(message);
     } finally {
       setLoading(false);
     }

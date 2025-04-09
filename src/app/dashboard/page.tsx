@@ -2,9 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { Database } from '@/lib/database.types';
+import Link from 'next/link'; // Import Link
+
+// Define type for formulation
+type Formulation = Database['public']['Tables']['formulations']['Row'];
 
 export default function CustomerDashboard() {
-  const [formulations, setFormulations] = useState<any[]>([]);
+  const [formulations, setFormulations] = useState<Formulation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
@@ -24,10 +29,7 @@ export default function CustomerDashboard() {
         // Fetch formulations for the current user
         let query = supabase
           .from('formulations')
-          .select(`
-            *,
-            reports(*)
-          `)
+          .select(`*`) // Removed join with non-existent 'reports' table
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
         
@@ -43,8 +45,14 @@ export default function CustomerDashboard() {
         }
         
         setFormulations(data || []);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch formulations');
+      } catch (err: unknown) {
+        let message = 'Failed to fetch formulations';
+        if (err instanceof Error) {
+          message = err.message;
+        } else if (typeof err === 'string') {
+          message = err;
+        }
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -97,12 +105,12 @@ export default function CustomerDashboard() {
           </select>
         </div>
         
-        <a
+        <Link
           href="/formulations/upload"
           className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           Upload New Formulation
-        </a>
+        </Link>
       </div>
       
       {loading ? (
@@ -114,14 +122,14 @@ export default function CustomerDashboard() {
         <div className="text-center py-12 bg-white rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-2">No formulations found</h2>
           <p className="text-gray-600 mb-6">
-            You haven't submitted any formulations yet. Get started by uploading your first formulation.
+            You haven&apos;t submitted any formulations yet. Get started by uploading your first formulation.
           </p>
-          <a
+          <Link
             href="/formulations/upload"
             className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             Upload Formulation
-          </a>
+          </Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -130,13 +138,8 @@ export default function CustomerDashboard() {
               <div className="p-6">
                 <h2 className="text-xl font-semibold mb-2">{formulation.name}</h2>
                 <p className="text-gray-600 mb-4">
-                  {formulation.description ? (
-                    formulation.description.length > 100 
-                      ? `${formulation.description.substring(0, 100)}...` 
-                      : formulation.description
-                  ) : (
-                    `Product Type: ${formulation.product_type}`
-                  )}
+                  {/* Removed description as it's not in schema */}
+                  Product Type: {formulation.product_type}
                 </p>
                 
                 <div className="flex justify-between items-center mb-4">
@@ -156,24 +159,15 @@ export default function CustomerDashboard() {
                       {formulation.payment_status}
                     </span>
                   </div>
-                  <a
+                  <Link
                     href={`/formulations/${formulation.id}`}
                     className="text-blue-600 hover:text-blue-800"
                   >
                     View Details
-                  </a>
+                  </Link>
                 </div>
                 
-                {formulation.reports && formulation.reports.length > 0 && (
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="flex items-center">
-                      <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span className="text-sm font-medium">Report Available</span>
-                    </div>
-                  </div>
-                )}
+                {/* Removed Report Available section as 'reports' table doesn't exist */}
               </div>
             </div>
           ))}

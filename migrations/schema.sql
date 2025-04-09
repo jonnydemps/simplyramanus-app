@@ -1,122 +1,185 @@
--- Create users table extension (handled by Supabase Auth)
--- This is just a reference for our schema design
+-- Create tables for SimplyRA application
 
--- Create profiles table to store additional user information
-CREATE TABLE profiles (
-  id UUID REFERENCES auth.users(id) PRIMARY KEY,
+-- Enable Row Level Security
+ALTER DATABASE postgres SET "app.jwt_secret" TO 'your-jwt-secret';
+
+-- Create profiles table
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   company_name TEXT NOT NULL,
-  contact_name TEXT,
   contact_email TEXT NOT NULL,
-  phone TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  contact_phone TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() ,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  is_admin BOOLEAN DEFAULT FALSE
 );
 
--- Create formulations table to store submitted formulations
-CREATE TABLE formulations (
+-- Create formulations table
+CREATE TABLE IF NOT EXISTS formulations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES auth.users(id) NOT NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
-  description TEXT,
   product_type TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending', -- pending, in_review, completed, rejected
-  original_file_name TEXT NOT NULL,
-  file_path TEXT NOT NULL,
-  report_path TEXT,
-  payment_status TEXT NOT NULL DEFAULT 'unpaid', -- unpaid, paid
-  payment_id TEXT,
+  description TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in_review', 'completed', 'rejected')),
+  payment_status TEXT DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'paid')),
+  original_file_name TEXT,
+  file_path TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create ingredients table to store master database of ingredients
-CREATE TABLE ingredients (
+-- Create ingredients table
+CREATE TABLE IF NOT EXISTS ingredients (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  formulation_id UUID REFERENCES formulations(id) ON DELETE CASCADE NOT NULL,
   inci_name TEXT NOT NULL,
   cas_number TEXT,
   function TEXT,
-  max_concentration DECIMAL,
-  restrictions TEXT,
-  notes TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(inci_name)
-);
-
--- Create formulation_ingredients table to store ingredients in each formulation
-CREATE TABLE formulation_ingredients (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  formulation_id UUID REFERENCES formulations(id) ON DELETE CASCADE NOT NULL,
-  ingredient_id UUID REFERENCES ingredients(id) NOT NULL,
   concentration DECIMAL NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create comments table for review comments
-CREATE TABLE comments (
+-- Create reports table
+CREATE TABLE IF NOT EXISTS reports (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   formulation_id UUID REFERENCES formulations(id) ON DELETE CASCADE NOT NULL,
-  user_id UUID REFERENCES auth.users(id) NOT NULL,
+  title TEXT NOT NULL,
   content TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create reports table for generated reports
-CREATE TABLE reports (
+-- Create comments table
+CREATE TABLE IF NOT EXISTS comments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   formulation_id UUID REFERENCES formulations(id) ON DELETE CASCADE NOT NULL,
-  reviewer_id UUID REFERENCES auth.users(id) NOT NULL,
-  status TEXT NOT NULL, -- compliant, non_compliant, partially_compliant
-  summary TEXT NOT NULL,
-  details TEXT,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  content TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create payments table to track payments
-CREATE TABLE payments (
+-- Create payments table
+CREATE TABLE IF NOT EXISTS payments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES auth.users(id) NOT NULL,
-  formulation_id UUID REFERENCES formulations(id) NOT NULL,
+  formulation_id UUID REFERENCES formulations(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   amount DECIMAL NOT NULL,
-  currency TEXT NOT NULL DEFAULT 'AUD',
-  stripe_payment_id TEXT NOT NULL,
-  status TEXT NOT NULL, -- succeeded, pending, failed
+  currency TEXT DEFAULT 'AUD',
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed')),
+  stripe_payment_intent_id TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create RLS policies
 -- Enable Row Level Security
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE formulations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE formulation_ingredients ENABLE ROW LEVEL SECURITY;
-ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ingredients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 
--- Profiles policies
-CREATE POLICY "Users can view their own profile" 
-  ON profiles FOR SELECT 
+-- Create policies
+CREATE POLICY "Users can view their own profiles"
+  ON profiles FOR SELECT
   USING (auth.uid() = id);
 
-CREATE POLICY "Users can update their own profile" 
-  ON profiles FOR UPDATE 
+CREATE POLICY "Users can update their own profiles"
+  ON profiles FOR UPDATE
   USING (auth.uid() = id);
 
--- Formulations policies
-CREATE POLICY "Users can view their own formulations" 
-  ON formulations FOR SELECT 
+CREATE POLICY "Users can view their own formulations"
+  ON formulations FOR SELECT
   USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can insert their own formulations" 
-  ON formulations FOR INSERT 
+CREATE POLICY "Users can insert their own formulations"
+  ON formulations FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Users can update their own formulations" 
-  ON formulations FOR UPDATE 
+CREATE POLICY "Users can update their own formulations"
+  ON formulations FOR UPDATE
   USING (auth.uid() = user_id);
 
--- Admin policies would be added for admin users
+CREATE POLICY "Users can view ingredients in their formulations"
+  ON ingredients FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM formulations
+    WHERE formulations.id = ingredients.formulation_id
+    AND formulations.user_id = auth.uid()
+  ));
+
+CREATE POLICY "Users can view reports for their formulations"
+  ON reports FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM formulations
+    WHERE formulations.id = reports.formulation_id
+    AND formulations.user_id = auth.uid()
+  ));
+
+CREATE POLICY "Users can view comments on their formulations"
+  ON comments FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM formulations
+    WHERE formulations.id = comments.formulation_id
+    AND formulations.user_id = auth.uid()
+  ));
+
+CREATE POLICY "Users can insert comments on their formulations"
+  ON comments FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can view their own payments"
+  ON payments FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Admin policies
+CREATE POLICY "Admins can view all profiles"
+  ON profiles FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.is_admin = true
+  ));
+
+CREATE POLICY "Admins can view all formulations"
+  ON formulations FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.is_admin = true
+  ));
+
+CREATE POLICY "Admins can update all formulations"
+  ON formulations FOR UPDATE
+  USING (EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.is_admin = true
+  ));
+
+CREATE POLICY "Admins can view all ingredients"
+  ON ingredients FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.is_admin = true
+  ));
+
+CREATE POLICY "Admins can insert reports"
+  ON reports FOR INSERT
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.is_admin = true
+  ));
+
+CREATE POLICY "Admins can update reports"
+  ON reports FOR UPDATE
+  USING (EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.is_admin = true
+  ));

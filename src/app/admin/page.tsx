@@ -2,9 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { Database } from '@/lib/database.types';
+
+// Define type for formulation with profile data
+type FormulationWithProfile = Database['public']['Tables']['formulations']['Row'] & {
+  profiles: Database['public']['Tables']['profiles']['Row'] | null;
+};
 
 export default function AdminDashboard() {
-  const [formulations, setFormulations] = useState<any[]>([]);
+  const [formulations, setFormulations] = useState<FormulationWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
@@ -20,8 +26,8 @@ export default function AdminDashboard() {
           .from('formulations')
           .select(`
             *,
-            profiles(company_name, contact_email)
-          `)
+            profiles(company_name)
+          `) // Corrected select query
           .order('created_at', { ascending: false });
         
         // Apply filters
@@ -36,8 +42,14 @@ export default function AdminDashboard() {
         }
         
         setFormulations(data || []);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch formulations');
+      } catch (err: unknown) {
+        let message = 'Failed to fetch formulations';
+        if (err instanceof Error) {
+          message = err.message;
+        } else if (typeof err === 'string') {
+          message = err;
+        }
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -63,8 +75,14 @@ export default function AdminDashboard() {
           ? { ...formulation, status: newStatus } 
           : formulation
       ));
-    } catch (err: any) {
-      setError(err.message || 'Failed to update formulation status');
+    } catch (err: unknown) {
+      let message = 'Failed to update formulation status';
+      if (err instanceof Error) {
+        message = err.message;
+      } else if (typeof err === 'string') {
+        message = err;
+      }
+      setError(message);
     }
   };
 

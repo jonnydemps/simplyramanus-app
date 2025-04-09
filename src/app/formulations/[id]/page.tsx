@@ -2,13 +2,26 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { Database, Json } from '@/lib/database.types'; // Import Json type
+import Link from 'next/link'; // Import Link
 
-export default function FormulationDetails({ params }: { params: { id: string } }) {
-  const [formulation, setFormulation] = useState<any>(null);
-  const [ingredients, setIngredients] = useState<any[]>([]);
-  const [report, setReport] = useState<any>(null);
-  const [comments, setComments] = useState<any[]>([]);
-  const [newComment, setNewComment] = useState('');
+// Define types
+type Formulation = Database['public']['Tables']['formulations']['Row'];
+type Ingredient = Database['public']['Tables']['ingredients']['Row'];
+
+// Removed unused CommentItem interface
+
+// Define props type
+interface PageProps {
+  params: { id: string };
+}
+
+export default function FormulationDetails({ params }: PageProps) {
+  const [formulation, setFormulation] = useState<Formulation | null>(null);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  // Removed report state
+  const [comments, setComments] = useState<Json | null>(null); // Use Json type for comments column
+  // Removed newComment state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +42,7 @@ export default function FormulationDetails({ params }: { params: { id: string } 
         // Fetch formulation details
         const { data: formulationData, error: formulationError } = await supabase
           .from('formulations')
-          .select('*')
+          .select('*, comments') // Select comments JSON field
           .eq('id', formulationId)
           .eq('user_id', user.id)
           .single();
@@ -39,52 +52,29 @@ export default function FormulationDetails({ params }: { params: { id: string } 
         }
         
         setFormulation(formulationData);
+        setComments(formulationData?.comments || null); // Set comments from formulation data
         
-        // Fetch ingredients
+        // Fetch ingredients directly
         const { data: ingredientsData, error: ingredientsError } = await supabase
-          .from('formulation_ingredients')
-          .select(`
-            *,
-            ingredients(*)
-          `)
+          .from('ingredients')
+          .select('*')
           .eq('formulation_id', formulationId);
-        
+
         if (ingredientsError) {
           throw ingredientsError;
         }
-        
+
         setIngredients(ingredientsData || []);
         
-        // Fetch report
-        const { data: reportData, error: reportError } = await supabase
-          .from('reports')
-          .select('*')
-          .eq('formulation_id', formulationId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-        
-        if (!reportError) {
-          setReport(reportData);
+        // Removed fetching from non-existent 'reports' and 'comments' tables
+      } catch (err: unknown) {
+        let message = 'Failed to fetch formulation details';
+        if (err instanceof Error) {
+          message = err.message;
+        } else if (typeof err === 'string') {
+          message = err;
         }
-        
-        // Fetch comments
-        const { data: commentsData, error: commentsError } = await supabase
-          .from('comments')
-          .select(`
-            *,
-            profiles(company_name)
-          `)
-          .eq('formulation_id', formulationId)
-          .order('created_at', { ascending: true });
-        
-        if (commentsError) {
-          throw commentsError;
-        }
-        
-        setComments(commentsData || []);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch formulation details');
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -93,45 +83,7 @@ export default function FormulationDetails({ params }: { params: { id: string } 
     fetchFormulationDetails();
   }, [formulationId]);
 
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!newComment.trim()) {
-      return;
-    }
-    
-    try {
-      // Get the current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-      
-      const { data: commentData, error: commentError } = await supabase
-        .from('comments')
-        .insert({
-          formulation_id: formulationId,
-          user_id: user.id,
-          content: newComment,
-        })
-        .select(`
-          *,
-          profiles(company_name)
-        `)
-        .single();
-      
-      if (commentError) {
-        throw commentError;
-      }
-      
-      // Update local state
-      setComments([...comments, commentData]);
-      setNewComment('');
-    } catch (err: any) {
-      setError(err.message || 'Failed to add comment');
-    }
-  };
+  // Removed handleAddComment function
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -148,18 +100,7 @@ export default function FormulationDetails({ params }: { params: { id: string } 
     }
   };
 
-  const getReportStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'compliant':
-        return 'bg-green-100 text-green-800';
-      case 'non_compliant':
-        return 'bg-red-100 text-red-800';
-      case 'partially_compliant':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Removed getReportStatusBadgeClass function
 
   if (loading) {
     return (
@@ -176,12 +117,12 @@ export default function FormulationDetails({ params }: { params: { id: string } 
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
           {error}
         </div>
-        <a
+        <Link
           href="/dashboard"
           className="text-blue-600 hover:text-blue-800"
         >
           Back to Dashboard
-        </a>
+        </Link>
       </div>
     );
   }
@@ -190,14 +131,14 @@ export default function FormulationDetails({ params }: { params: { id: string } 
     return (
       <div className="p-6">
         <div className="mb-4 p-3 bg-yellow-100 text-yellow-700 rounded-md">
-          Formulation not found or you don't have access to it.
+          Formulation not found or you don&apos;t have access to it.
         </div>
-        <a
+        <Link
           href="/dashboard"
           className="text-blue-600 hover:text-blue-800"
         >
           Back to Dashboard
-        </a>
+        </Link>
       </div>
     );
   }
@@ -206,12 +147,12 @@ export default function FormulationDetails({ params }: { params: { id: string } 
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Formulation Details</h1>
-        <a
+        <Link
           href="/dashboard"
           className="text-blue-600 hover:text-blue-800"
         >
           Back to Dashboard
-        </a>
+        </Link>
       </div>
       
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -242,12 +183,7 @@ export default function FormulationDetails({ params }: { params: { id: string } 
               </div>
             </div>
             
-            {formulation.description && (
-              <div className="mt-4">
-                <h3 className="font-medium text-gray-700 mb-1">Description:</h3>
-                <p className="text-gray-600">{formulation.description}</p>
-              </div>
-            )}
+            {/* Removed description */}
           </div>
           
           <div>
@@ -255,28 +191,21 @@ export default function FormulationDetails({ params }: { params: { id: string } 
             <div className="border border-gray-300 rounded-md p-4">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="font-medium">{formulation.original_file_name}</p>
-                  <p className="text-sm text-gray-500">Uploaded on {new Date(formulation.created_at).toLocaleDateString()}</p>
+                  {/* Removed original_file_name */}
+                  <p className="text-sm text-gray-500">Submitted on {new Date(formulation.created_at).toLocaleDateString()}</p>
                 </div>
-                <a
-                  href={`/api/formulations/${formulationId}/download`}
-                  className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Download
-                </a>
+                {/* Removed download link as file_path is not in schema */}
               </div>
             </div>
             
             {formulation.payment_status !== 'paid' && (
               <div className="mt-6">
-                <a
+                <Link
                   href={`/payment?formulationId=${formulationId}`}
                   className="w-full inline-block text-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
                   Complete Payment
-                </a>
+                </Link>
               </div>
             )}
           </div>
@@ -296,15 +225,17 @@ export default function FormulationDetails({ params }: { params: { id: string } 
                   <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">CAS Number</th>
                   <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Concentration (%)</th>
                   <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Function</th>
+                  {/* Removed Restrictions column */}
                 </tr>
               </thead>
               <tbody>
                 {ingredients.map((ingredient) => (
                   <tr key={ingredient.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 text-sm text-gray-700">{ingredient.ingredients?.inci_name}</td>
-                    <td className="py-3 px-4 text-sm text-gray-700">{ingredient.ingredients?.cas_number || '-'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-700">{ingredient.name}</td> {/* Use name */}
+                    <td className="py-3 px-4 text-sm text-gray-700">{ingredient.cas_number || '-'}</td>
                     <td className="py-3 px-4 text-sm text-gray-700">{ingredient.concentration}%</td>
-                    <td className="py-3 px-4 text-sm text-gray-700">{ingredient.ingredients?.function || '-'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-700">{ingredient.function || '-'}</td>
+                    {/* Removed Restrictions cell */}
                   </tr>
                 ))}
               </tbody>
@@ -313,73 +244,44 @@ export default function FormulationDetails({ params }: { params: { id: string } 
         )}
       </div>
       
-      {report && (
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Compliance Report</h2>
-          <div className="mb-4">
-            <span className="font-medium text-gray-700">Status:</span>{' '}
-            <span className={`px-2 py-1 rounded-full text-xs ${getReportStatusBadgeClass(report.status)}`}>
-              {report.status.replace('_', ' ')}
-            </span>
-          </div>
-          <div className="mb-4">
-            <h3 className="font-medium text-gray-700 mb-2">Summary:</h3>
-            <p className="text-gray-600 bg-gray-50 p-3 rounded-md">{report.summary}</p>
-          </div>
-          {report.details && (
-            <div>
-              <h3 className="font-medium text-gray-700 mb-2">Detailed Findings:</h3>
-              <div className="text-gray-600 bg-gray-50 p-3 rounded-md whitespace-pre-wrap">
-                {report.details}
-              </div>
+      {/* Removed Report section */}
+      
+      {/* Display comments from formulation.comments JSON field */}
+      {comments && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-4">Comments</h2>
+          {/* Basic display assuming comments is an array of objects with text */}
+          {/* This needs refinement based on the actual structure of the JSON */}
+          {Array.isArray(comments) && comments.length > 0 ? (
+            <div className="space-y-4">
+              {comments.map((comment: Json, index: number) => {
+                // Type guard: Check if comment is an object matching CommentItem structure
+                // Type guard: Check if comment is an object with a 'text' property
+                if (typeof comment === 'object' && comment !== null && 'text' in comment && typeof comment.text === 'string') {
+                  return (
+                    <div key={index} className="border-b pb-4">
+                      {/* Access properties directly after the type guard */}
+                      <p className="text-gray-700">{comment.text}</p>
+                      {/* Check optional properties before accessing */}
+                      {typeof comment.author === 'string' && <span className="text-sm text-gray-500"> - {comment.author}</span>}
+                      {(typeof comment.timestamp === 'string' || typeof comment.timestamp === 'number') && <span className="text-sm text-gray-500"> ({new Date(comment.timestamp).toLocaleString()})</span>}
+                    </div>
+                  );
+                }
+                // Fallback for other JSON types in the array
+                return (
+                  <div key={index} className="border-b pb-4">
+                    <p className="text-gray-700">{JSON.stringify(comment)}</p>
+                  </div>
+                );
+              })}
             </div>
+          ) : (
+            <p className="text-gray-600">No comments available.</p>
           )}
-          <div className="mt-4 text-sm text-gray-500">
-            Report generated on {new Date(report.created_at).toLocaleString()}
-          </div>
+          {/* Removed comment adding form */}
         </div>
       )}
-      
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4">Comments</h2>
-        <div className="space-y-4 mb-6">
-          {comments.length === 0 ? (
-            <p className="text-gray-600">No comments yet.</p>
-          ) : (
-            comments.map((comment) => (
-              <div key={comment.id} className="border-b pb-4">
-                <div className="flex justify-between mb-1">
-                  <span className="font-medium">{comment.profiles?.company_name || 'Admin'}</span>
-                  <span className="text-sm text-gray-500">{new Date(comment.created_at).toLocaleString()}</span>
-                </div>
-                <p className="text-gray-700">{comment.content}</p>
-              </div>
-            ))
-          )}
-        </div>
-        
-        <form onSubmit={handleAddComment}>
-          <div className="mb-4">
-            <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1">
-              Add Comment
-            </label>
-            <textarea
-              id="comment"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter your comment here..."
-            />
-          </div>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            Add Comment
-          </button>
-        </form>
-      </div>
     </div>
   );
 }

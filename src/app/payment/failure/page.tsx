@@ -1,4 +1,6 @@
-export default function PaymentFailurePage({ 
+import Link from 'next/link'; // Import Link
+
+export default function PaymentFailurePage({
   searchParams 
 }: { 
   searchParams: { formulationId: string } 
@@ -11,7 +13,7 @@ export default function PaymentFailurePage({
         <div className="text-center mb-8">
           <h1 className="text-3xl font-extrabold text-gray-900">Payment Failed</h1>
           <p className="mt-2 text-lg text-gray-600">
-            We couldn't process your payment
+            We couldn&apos;t process your payment
           </p>
         </div>
         
@@ -43,18 +45,18 @@ export default function PaymentFailurePage({
         </div>
         
         <div className="flex justify-center space-x-4">
-          <a 
+          <Link
             href={`/payment?formulationId=${formulationId}`}
             className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             Try Again
-          </a>
-          <a 
-            href="/dashboard" 
+          </Link>
+          <Link
+            href="/dashboard"
             className="inline-flex items-center px-4 py-2 border border-gray-300 text-base font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             Go to Dashboard
-          </a>
+          </Link>
         </div>
       </div>
     </div>

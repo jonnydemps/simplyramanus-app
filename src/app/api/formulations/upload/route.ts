@@ -1,26 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import * as XLSX from 'xlsx';
-import { createFormulation } from '@/lib/supabase';
+// Removed incorrect import: import { createFormulation } from '@/lib/supabase';
 
-// Initialize Supabase client
+// Supabase URL needed for service client initialization inside handler
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Removed unused Anon client initialization
+
+// Service role client will be initialized inside the handler
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the current user
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      return NextResponse.json(
-        { message: 'Unauthorized' },
-        { status: 401 }
-      );
+    // Initialize service role client *inside* the handler
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Supabase URL or Service Role Key is missing.');
+      return NextResponse.json({ message: 'Server configuration error' }, { status: 500 });
+    }
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Get the current user using the service client (or anon client if appropriate)
+    // Using service client here for consistency, assuming RLS might not be fully set up for anon key access to user data
+    const { data: { user }, error: userError } = await supabase.auth.getUser(); // Use getUser with service key
+
+    if (userError || !user) {
+      console.error('Auth error:', userError);
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
     
-    const userId = session.user.id;
+    const userId = user.id;
     
     // Parse the multipart form data
     const formData = await request.formData();
@@ -74,7 +82,7 @@ export async function POST(request: NextRequest) {
     const fileBuffer = Buffer.from(arrayBuffer);
     const filePath = `formulations/${userId}/${Date.now()}_${file.name}`;
     
-    const { data: fileData, error: fileError } = await supabase.storage
+    const { error: fileError } = await supabase.storage
       .from('formulations')
       .upload(filePath, fileBuffer, {
         contentType: file.type,
@@ -89,17 +97,21 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Create formulation record in database
-    const { data: formulation, error: formulationError } = await createFormulation({
-      user_id: userId,
-      name,
-      description,
-      product_type: productType,
-      original_file_name: file.name,
-      file_path: filePath,
-      status: 'pending',
-      payment_status: 'unpaid',
-    });
+    // Create formulation record in database using the supabase client
+    const { data: newFormulation, error: formulationError } = await supabase
+      .from('formulations') // Assuming the table name is 'formulations'
+      .insert({
+        user_id: userId,
+        name,
+        description,
+        product_type: productType,
+        original_file_name: file.name,
+        file_path: filePath,
+        status: 'pending', // Default status
+        payment_status: 'unpaid', // Default payment status
+      })
+      .select() // Select the newly created record
+      .single(); // Expect only one record
     
     if (formulationError) {
       console.error('Formulation creation error:', formulationError);
@@ -114,7 +126,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({
       message: 'Formulation uploaded successfully',
-      id: formulation.id,
+      id: newFormulation.id, // Use the id from the newly created record
     });
   } catch (error) {
     console.error('Formulation upload error:', error);

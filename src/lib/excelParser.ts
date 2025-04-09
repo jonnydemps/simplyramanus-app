@@ -14,7 +14,7 @@ interface IngredientRow {
   Function?: string;
   Purpose?: string;
   Role?: string;
-  [key: string]: any; // Allow for other properties
+  [key: string]: string | number | boolean | null | undefined; // Allow for other properties with basic types
 }
 
 // Function to extract ingredients from Excel file

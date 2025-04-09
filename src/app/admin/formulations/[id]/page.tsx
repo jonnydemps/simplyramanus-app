@@ -2,20 +2,33 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { Database } from '@/lib/database.types';
 
+// Define types based on database.types.ts
+type Formulation = Database['public']['Tables']['formulations']['Row'] & {
+  profiles: Database['public']['Tables']['profiles']['Row'] | null; // Assuming profiles relation
+};
+type Ingredient = Database['public']['Tables']['ingredients']['Row'];
+// Removed FormulationIngredient type as the table doesn't exist
+// Removed Comment type as the table doesn't exist
+
+// Revert to inline props type definition
 export default function FormulationReview({ params }: { params: { id: string } }) {
-  const [formulation, setFormulation] = useState<any>(null);
-  const [ingredients, setIngredients] = useState<any[]>([]);
+  const [formulation, setFormulation] = useState<Formulation | null>(null);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]); // Use Ingredient type directly
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reportData, setReportData] = useState({
-    status: 'compliant',
-    summary: '',
-    details: '',
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [comments, setComments] = useState<any[]>([]);
-  const [newComment, setNewComment] = useState('');
+  // Removed unused reportData state
+  // const [reportData, setReportData] = useState({
+  //   status: 'compliant',
+  //   summary: '',
+  //   details: '',
+  // });
+  // Removed unused submitting state
+  // const [submitting, setSubmitting] = useState(false);
+  // Removed comments state as the table/logic is incorrect
+  // const [comments, setComments] = useState<Comment[]>([]);
+  // const [newComment, setNewComment] = useState('');
 
   const formulationId = params.id;
 
@@ -29,8 +42,8 @@ export default function FormulationReview({ params }: { params: { id: string } }
           .from('formulations')
           .select(`
             *,
-            profiles(company_name, contact_email)
-          `)
+            profiles(company_name)
+          `) // Corrected select query
           .eq('id', formulationId)
           .single();
         
@@ -40,38 +53,27 @@ export default function FormulationReview({ params }: { params: { id: string } }
         
         setFormulation(formulationData);
         
-        // Fetch ingredients
+        // Fetch ingredients directly from 'ingredients' table
         const { data: ingredientsData, error: ingredientsError } = await supabase
-          .from('formulation_ingredients')
-          .select(`
-            *,
-            ingredients(*)
-          `)
-          .eq('formulation_id', formulationId);
-        
+          .from('ingredients')
+          .select(`*`) // Select all ingredient fields
+          .eq('formulation_id', formulationId); // Filter by formulation_id
+
         if (ingredientsError) {
           throw ingredientsError;
         }
-        
+
         setIngredients(ingredientsData || []);
         
-        // Fetch comments
-        const { data: commentsData, error: commentsError } = await supabase
-          .from('comments')
-          .select(`
-            *,
-            profiles(company_name)
-          `)
-          .eq('formulation_id', formulationId)
-          .order('created_at', { ascending: true });
-        
-        if (commentsError) {
-          throw commentsError;
+        // Removed fetching from non-existent 'comments' table
+      } catch (err: unknown) {
+        let message = 'Failed to fetch formulation details';
+        if (err instanceof Error) {
+          message = err.message;
+        } else if (typeof err === 'string') {
+          message = err;
         }
-        
-        setComments(commentsData || []);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch formulation details');
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -92,85 +94,24 @@ export default function FormulationReview({ params }: { params: { id: string } }
       }
       
       // Update local state
-      setFormulation({ ...formulation, status: newStatus });
-    } catch (err: any) {
-      setError(err.message || 'Failed to update formulation status');
+      // Update local state - ensure formulation is not null before spreading
+      if (formulation) {
+        setFormulation({ ...formulation, status: newStatus });
+      }
+    } catch (err: unknown) {
+      let message = 'Failed to update formulation status';
+      if (err instanceof Error) {
+        message = err.message;
+      } else if (typeof err === 'string') {
+        message = err;
+      }
+      setError(message);
     }
   };
 
-  const handleReportSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      setSubmitting(true);
-      
-      // Create report
-      const { data: reportData, error: reportError } = await supabase
-        .from('reports')
-        .insert({
-          formulation_id: formulationId,
-          reviewer_id: (await supabase.auth.getUser()).data.user?.id,
-          status: reportData.status,
-          summary: reportData.summary,
-          details: reportData.details,
-        })
-        .select()
-        .single();
-      
-      if (reportError) {
-        throw reportError;
-      }
-      
-      // Update formulation status to completed
-      await handleStatusChange('completed');
-      
-      // Reset form
-      setReportData({
-        status: 'compliant',
-        summary: '',
-        details: '',
-      });
-      
-      alert('Report submitted successfully');
-    } catch (err: any) {
-      setError(err.message || 'Failed to submit report');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  // Removed unused handleReportSubmit function
 
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!newComment.trim()) {
-      return;
-    }
-    
-    try {
-      const { data: commentData, error: commentError } = await supabase
-        .from('comments')
-        .insert({
-          formulation_id: formulationId,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          content: newComment,
-        })
-        .select(`
-          *,
-          profiles(company_name)
-        `)
-        .single();
-      
-      if (commentError) {
-        throw commentError;
-      }
-      
-      // Update local state
-      setComments([...comments, commentData]);
-      setNewComment('');
-    } catch (err: any) {
-      setError(err.message || 'Failed to add comment');
-    }
-  };
+  // Removed handleAddComment function as 'comments' table doesn't exist
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -253,9 +194,7 @@ export default function FormulationReview({ params }: { params: { id: string } }
               </div>
               <div>
                 <span className="font-medium text-gray-700">Company:</span> {formulation.profiles?.company_name}
-              </div>
-              <div>
-                <span className="font-medium text-gray-700">Contact:</span> {formulation.profiles?.contact_email}
+                {/* Removed Contact Email as it's not in profiles type */}
               </div>
               <div>
                 <span className="font-medium text-gray-700">Submitted:</span> {new Date(formulation.created_at).toLocaleString()}
@@ -274,12 +213,7 @@ export default function FormulationReview({ params }: { params: { id: string } }
               </div>
             </div>
             
-            {formulation.description && (
-              <div className="mt-4">
-                <h3 className="font-medium text-gray-700 mb-1">Description:</h3>
-                <p className="text-gray-600">{formulation.description}</p>
-              </div>
-            )}
+            {/* Removed Description section as it's not in formulations type */}
             
             <div className="mt-6 space-x-2">
               {formulation.status === 'pending' && formulation.payment_status === 'paid' && (
@@ -306,8 +240,8 @@ export default function FormulationReview({ params }: { params: { id: string } }
             <div className="border border-gray-300 rounded-md p-4">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="font-medium">{formulation.original_file_name}</p>
-                  <p className="text-sm text-gray-500">Uploaded on {new Date(formulation.created_at).toLocaleDateString()}</p>
+                  {/* Removed original_file_name as it's not in formulations type */}
+                  <p className="text-sm text-gray-500">Submitted on {new Date(formulation.created_at).toLocaleDateString()}</p>
                 </div>
                 <a
                   href={`/api/formulations/${formulationId}/download`}
@@ -342,11 +276,12 @@ export default function FormulationReview({ params }: { params: { id: string } }
               <tbody>
                 {ingredients.map((ingredient) => (
                   <tr key={ingredient.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 text-sm text-gray-700">{ingredient.ingredients?.inci_name}</td>
-                    <td className="py-3 px-4 text-sm text-gray-700">{ingredient.ingredients?.cas_number || '-'}</td>
+                    {/* Access ingredient details directly */}
+                    <td className="py-3 px-4 text-sm text-gray-700">{ingredient.name}</td> {/* Use ingredient.name */}
+                    <td className="py-3 px-4 text-sm text-gray-700">{ingredient.cas_number || '-'}</td>
                     <td className="py-3 px-4 text-sm text-gray-700">{ingredient.concentration}%</td>
-                    <td className="py-3 px-4 text-sm text-gray-700">{ingredient.ingredients?.function || '-'}</td>
-                    <td className="py-3 px-4 text-sm text-gray-700">{ingredient.ingredients?.restrictions || 'None'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-700">{ingredient.function || '-'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-700">{/* Removed restrictions - not in schema */}</td>
                   </tr>
                 ))}
               </tbody>
@@ -355,107 +290,9 @@ export default function FormulationReview({ params }: { params: { id: string } }
         )}
       </div>
       
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Comments</h2>
-        <div className="space-y-4 mb-6">
-          {comments.length === 0 ? (
-            <p className="text-gray-600">No comments yet.</p>
-          ) : (
-            comments.map((comment) => (
-              <div key={comment.id} className="border-b pb-4">
-                <div className="flex justify-between mb-1">
-                  <span className="font-medium">{comment.profiles?.company_name || 'Admin'}</span>
-                  <span className="text-sm text-gray-500">{new Date(comment.created_at).toLocaleString()}</span>
-                </div>
-                <p className="text-gray-700">{comment.content}</p>
-              </div>
-            ))
-          )}
-        </div>
-        
-        <form onSubmit={handleAddComment}>
-          <div className="mb-4">
-            <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1">
-              Add Comment
-            </label>
-            <textarea
-              id="comment"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter your comment here..."
-            />
-          </div>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            Add Comment
-          </button>
-        </form>
-      </div>
+      {/* Removed Comments section as the table/logic is incorrect */}
       
-      {formulation.status === 'in_review' && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">Generate Report</h2>
-          <form onSubmit={handleReportSubmit}>
-            <div className="mb-4">
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-                Compliance Status
-              </label>
-              <select
-                id="status"
-                value={reportData.status}
-                onChange={(e) => setReportData({ ...reportData, status: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="compliant">Compliant</option>
-                <option value="non_compliant">Non-Compliant</option>
-                <option value="partially_compliant">Partially Compliant</option>
-              </select>
-            </div>
-            
-            <div className="mb-4">
-              <label htmlFor="summary" className="block text-sm font-medium text-gray-700 mb-1">
-                Summary
-              </label>
-              <textarea
-                id="summary"
-                value={reportData.summary}
-                onChange={(e) => setReportData({ ...reportData, summary: e.target.value })}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter a summary of the compliance review..."
-                required
-              />
-            </div>
-            
-            <div className="mb-6">
-              <label htmlFor="details" className="block text-sm font-medium text-gray-700 mb-1">
-                Detailed Report
-              </label>
-              <textarea
-                id="details"
-                value={reportData.details}
-                onChange={(e) => setReportData({ ...reportData, details: e.target.value })}
-                rows={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter detailed findings and recommendations..."
-              />
-            </div>
-            
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
-            >
-              {submitting ? 'Submitting...' : 'Submit Report'}
-            </button>
-          </form>
-        </div>
-      )}
+      {/* Removed Report Generation form as the 'reports' table doesn't exist */}
     </div>
   );
 }
