@@ -5,16 +5,14 @@ import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 
-// Updated Profile type to match the database schema (using 'id' as the link to auth.users)
+// Profile type aligned with database.types.ts
 type Profile = {
-  id: string; // This IS the user's auth ID (PK, FK)
+  id: string; // Primary Key, Foreign Key to auth.users.id
+  user_id: string; // Foreign key to auth.users.id (as per types)
   company_name: string;
-  contact_email: string; // Added based on schema
-  contact_phone?: string | null; // Added based on schema
   is_admin: boolean;
-  created_at?: string | null; // Added based on schema
-  updated_at?: string | null; // Added based on schema
-  // Remove user_id if it's not a separate column
+  created_at: string; // Non-nullable as per types
+  // Removed contact_email, contact_phone, updated_at as they are not in database.types.ts
 };
 
 type AuthContextType = {
@@ -56,7 +54,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         // Select specific columns, ensure 'id' is the key column
-        .select('id, company_name, contact_email, contact_phone, is_admin, created_at, updated_at')
+        // Select columns defined in database.types.ts for profiles.Row
+        .select('id, user_id, company_name, is_admin, created_at')
         .eq('id', userId) // Corrected: Filter by 'id' column matching auth.uid()
         .single();
 
