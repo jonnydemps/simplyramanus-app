@@ -20,7 +20,7 @@ export default function SignUpForm() {
 
     try {
       // Sign up the user, passing companyName in options.data for the trigger
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { data: _data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
