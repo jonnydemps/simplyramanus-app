@@ -2,15 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Database } from '@/lib/database.types'; // Removed Json import as comments state is removed
-import Link from 'next/link';
+import { Database } from '@/lib/database.types';
+// import Link from 'next/link'; // REMOVED - Not used in simplified version
 
 // Use base types from database.types.ts
-// Note: Formulation type does NOT include 'comments' column based on corrected types
 type Formulation = Database['public']['Tables']['formulations']['Row'];
-type Ingredient = Database['public']['Tables']['ingredients']['Row'];
-// Comments would be fetched separately if needed:
-// type Comment = Database['public']['Tables']['comments']['Row']; 
+// type Ingredient = Database['public']['Tables']['ingredients']['Row']; // REMOVED - Not used
 
 // Define props type
 interface PageProps {
@@ -19,9 +16,7 @@ interface PageProps {
 
 export default function FormulationDetails({ params }: PageProps) {
   const [formulation, setFormulation] = useState<Formulation | null>(null);
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  // Removed comments state - fetch separately if needed
-  // const [comments, setComments] = useState<Json | null>(null); 
+  // const [ingredients, setIngredients] = useState<Ingredient[]>([]); // REMOVED - Not used
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +24,6 @@ export default function FormulationDetails({ params }: PageProps) {
 
   useEffect(() => {
     const fetchFormulationDetails = async () => {
-      // Check formulationId validity
       if (!formulationId || typeof formulationId !== 'string') {
         setError("Invalid or missing Formulation ID.");
         setLoading(false);
@@ -40,19 +34,16 @@ export default function FormulationDetails({ params }: PageProps) {
         setLoading(true);
         setError(null);
 
-        // Get the current user - needed for the ownership check below
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          // Should ideally be handled by middleware or layout, but good failsafe
-          throw new Error('User not authenticated'); 
+          throw new Error('User not authenticated');
         }
 
-        // Fetch formulation details - REMOVED 'comments' from select
         console.log(`Workspaceing formulation (user view): ${formulationId}`);
         const { data: formulationData, error: formulationError } = await supabase
           .from('formulations')
-          .select('*') // Select all columns *from formulations table only*
-          // If you need company name here too, add: .select('*, profiles(company_name)')
+          .select('*') // Select required formulation columns
+          // Add profile join ONLY if needed: .select('*, profiles(company_name)')
           .eq('id', formulationId)
           .eq('user_id', user.id) // Verify ownership
           .single();
@@ -68,38 +59,21 @@ export default function FormulationDetails({ params }: PageProps) {
           setFormulation(null);
         } else if (formulationData) {
           console.log("User formulation data fetched:", formulationData);
-          setFormulation(formulationData); // Type should now match
+          setFormulation(formulationData);
 
-          // Removed setting comments state:
-          // setComments(formulationData?.comments || null); 
+          // --- REMOVED Ingredients Fetch ---
 
-          // Fetch ingredients only if formulation was found
-          console.log(`Workspaceing ingredients for formulation: ${formulationId}`);
-          const { data: ingredientsData, error: ingredientsError } = await supabase
-            .from('ingredients')
-            .select('*')
-            .eq('formulation_id', formulationId);
-
-          if (ingredientsError) {
-            console.error("Error fetching ingredients:", ingredientsError);
-            setError(prev => prev ? `${prev}\nFailed to fetch ingredients.` : `Failed to fetch ingredients.`);
-            setIngredients([]);
-          } else {
-             console.log("Ingredients data fetched:", ingredientsData);
-             setIngredients(ingredientsData || []);
-          }
         } else {
           setError(`Formulation with ID ${formulationId} not found.`);
           setFormulation(null);
-          setIngredients([]);
         }
 
       } catch (err: unknown) {
-        let message = 'Failed to fetch formulation details';
+         let message = 'Failed to fetch formulation details';
          if (typeof err === 'object' && err !== null && 'message' in err) { message = err.message as string; }
          else if (err instanceof Error) { message = err.message; }
          console.error("Fetch User Formulation Details Catch Block:", err);
-        setError(message);
+         setError(message);
       } finally {
         setLoading(false);
       }
@@ -108,26 +82,92 @@ export default function FormulationDetails({ params }: PageProps) {
     fetchFormulationDetails();
   }, [formulationId]);
 
-  // getStatusBadgeClass function (keep as is)
-  const getStatusBadgeClass = (status: string) => { /* ... */ };
+  // REMOVED unused getStatusBadgeClass function
+  // const getStatusBadgeClass = (status: string) => { ... };
 
-  // --- Render logic (keep as is, but remove rendering of comments state) ---
-  if (loading) { /* ... */ }
-  if (error && !formulation) { /* ... */ } // Error display
-  if (!formulation) { /* ... */ } // Not found display
+  // --- Render logic ---
+  if (loading) {
+    return (
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Loading formulation details...</p>
+      </div>
+    );
+  }
 
+  if (error && !formulation) {
+    return (
+      <div className="p-6">
+        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+          Error: {error}
+        </div>
+        {/* Using basic anchor tag now, import Link if preferred */}
+        <a href="/dashboard" className="text-blue-600 hover:text-blue-800">
+          Back to Dashboard
+        </a>
+      </div>
+    );
+  }
+
+  if (!formulation) {
+     // Added condition to handle error message even if formulation becomes null later
+    return (
+      <div className="p-6">
+        <div className={`mb-4 p-3 rounded-md ${error ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+          {error || "Formulation not found or you don't have access to it."}
+        </div>
+        <a href="/dashboard" className="text-blue-600 hover:text-blue-800">
+          Back to Dashboard
+        </a>
+      </div>
+    );
+  }
+
+  // --- Main Content Rendering (Simplified) ---
   return (
     <div className="p-6">
-      {/* ... Error display (for non-blocking errors) ... */}
-      {/* ... Header ... */}
-      {/* ... Formulation Details Section ... */}
-      {/* ... Ingredients Section ... */}
+       {/* Display non-blocking errors if they occur during actions */}
+      {error && (
+         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+           Error: {error}
+         </div>
+      )}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Formulation Details</h1>
+        <a href="/dashboard" className="text-blue-600 hover:text-blue-800">
+          Back to Dashboard
+        </a>
+      </div>
 
+      {/* Details Section */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-4">Formulation Information</h2>
+        <div className="space-y-3">
+          <div><span className="font-medium text-gray-700">Name:</span> {formulation.name}</div>
+          <div><span className="font-medium text-gray-700">Product Type:</span> {formulation.product_type}</div>
+          <div><span className="font-medium text-gray-700">Submitted:</span> {new Date(formulation.created_at).toLocaleString()}</div>
+          <div><span className="font-medium text-gray-700">Status:</span> {formulation.status}</div>
+          <div><span className="font-medium text-gray-700">Payment:</span> {formulation.payment_status}</div>
+          {formulation.description && (
+             <div><span className="font-medium text-gray-700">Description:</span> {formulation.description}</div>
+           )}
+          {/* Add other formulation fields as needed */}
+        </div>
+      </div>
+
+      {/* --- REMOVED Ingredients Section Rendering --- */}
       {/* --- REMOVED Comments Section Rendering --- */}
-      {/* {comments && ( ... display comments ... )} */}
-
-       {/* Removed unused Report section */}
-
+       {formulation.payment_status !== 'paid' && (
+         <div className="mt-6">
+           {/* Use basic anchor or re-import Link if needed */}
+           <a
+             href={`/payment?formulationId=${formulationId}`}
+             className="w-full inline-block text-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+           >
+             Complete Payment
+           </a>
+         </div>
+       )}
     </div>
   );
 }
