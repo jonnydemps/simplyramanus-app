@@ -8,7 +8,7 @@ import Link from 'next/link';
 export default function SignUpForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [companyName, setCompanyName] = useState('');
+  const [companyName, setCompanyName] = useState(''); // State for company name input
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -19,50 +19,51 @@ export default function SignUpForm() {
     setLoading(true);
 
     try {
-      // Sign up the user
-      const { data, error } = await supabase.auth.signUp({
+      // Sign up the user, passing companyName in options.data for the trigger
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/signup/confirmation`,
+          // This data gets stored in auth.users.raw_user_meta_data
+          // The database trigger 'handle_new_user' reads this
+          data: {
+            company_name: companyName
+          },
+          // This is where Supabase sends the confirmation link
+          // Ensure this path exists or change to your desired callback/confirmation URL
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
-      if (error) {
-        throw error;
+      if (signUpError) {
+        // Handle potential errors like user already registered, weak password etc.
+        throw signUpError;
       }
 
-      if (data?.user) {
-        // Create a profile for the user
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              user_id: data.user.id,
-              company_name: companyName,
-              is_admin: false,
-            },
-          ]);
+      // --- Manual Profile Insert Block REMOVED ---
+      // The database trigger 'handle_new_user' now handles profile creation automatically.
+      // It uses the 'id' from auth.users and the 'company_name' from options.data above.
 
-        if (profileError) {
-          throw profileError;
-        }
+      // If signUp was successful, Supabase sends a confirmation email (if email confirmations are enabled).
+      // Redirect to a page telling the user to check their email.
+      console.log("SignUpForm: Sign up successful (user created/email sent), redirecting...");
+      router.push('/signup/confirmation'); // Redirect user to check email/confirm
 
-        router.push('/signup/confirmation');
+    } catch (err: unknown) { // Catch block for sign-up errors
+      let message = 'An error occurred during sign up. Please check your details.';
+      if (typeof err === 'object' && err !== null && 'message' in err) {
+         message = err.message as string;
+      } else if (err instanceof Error) {
+         message = err.message;
       }
-    } catch (err: unknown) {
-      let message = 'An error occurred during sign up';
-      if (err instanceof Error) {
-        message = err.message;
-      } else if (typeof err === 'string') {
-        message = err;
-      }
+      console.error("SignUpForm: Sign up catch block:", err);
       setError(message);
     } finally {
       setLoading(false);
     }
   };
 
+  // --- JSX for the form (remains the same as before) ---
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -73,6 +74,7 @@ export default function SignUpForm() {
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSignUp}>
           <div className="rounded-md shadow-sm -space-y-px">
+            {/* Company Name Input */}
             <div>
               <label htmlFor="company-name" className="sr-only">
                 Company Name
@@ -88,6 +90,7 @@ export default function SignUpForm() {
                 onChange={(e) => setCompanyName(e.target.value)}
               />
             </div>
+            {/* Email Input */}
             <div>
               <label htmlFor="email-address" className="sr-only">
                 Email address
@@ -104,6 +107,7 @@ export default function SignUpForm() {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
+            {/* Password Input */}
             <div>
               <label htmlFor="password" className="sr-only">
                 Password
@@ -112,42 +116,3 @@ export default function SignUpForm() {
                 id="password"
                 name="password"
                 type="password"
-                autoComplete="new-password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {error && (
-            <div className="text-red-500 text-sm mt-2">{error}</div>
-          )}
-
-          <div className="flex items-center justify-between">
-            <div className="text-sm">
-              <Link
-                href="/signin"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
-                Already have an account? Sign in
-              </Link>
-            </div>
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              {loading ? 'Creating account...' : 'Sign up'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
