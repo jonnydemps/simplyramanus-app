@@ -37,14 +37,14 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: "comments_formulation_id_fkey" // CHECK ACTUAL!
+            foreignKeyName: "comments_formulation_id_fkey" // CHECK ACTUAL FK NAME!
             columns: ["formulation_id"]
             isOneToOne: false
             referencedRelation: "formulations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "comments_user_id_fkey" // CHECK ACTUAL!
+            foreignKeyName: "comments_user_id_fkey" // CHECK ACTUAL FK NAME!
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -99,7 +99,7 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: "formulations_user_id_fkey" // CHECK ACTUAL!
+            foreignKeyName: "formulations_user_id_fkey" // CHECK ACTUAL FK NAME!
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -280,7 +280,7 @@ export interface Database {
               referencedColumns: ["id"]
             }
           ]
-      } // <<< No comma needed if this is the last table definition
+      } // <<< No comma needed as this is the last table definition
     } // End Tables
     Views: {
       [_ in never]: never
@@ -297,8 +297,7 @@ export interface Database {
   } // End public
 } // End Database interface
 
-
-// Standard helper types often generated/included (Keep these as they are useful)
+// --- CORRECTED Standard helper types ---
 export type Tables<
   PublicTableNameOrOptions extends
     | keyof (Database["public"]["Tables"] & Database["public"]["Views"])
@@ -367,14 +366,15 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends
+  PublicEnumNameOrOptions extends // This is the correct variable for Enums
     | keyof Database["public"]["Enums"]
     | { schema: keyof Database },
   EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Enums"]
+    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"] // Corrected variable name here
     : never = never,
 > = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName] // Correct variable name used
   : PublicEnumNameOrOptions extends keyof Database["public"]["Enums"]
-    ? Database["public"]["Enums"][PublicEnumNameOrOptions]
+    ? Database["public"]["Enums"][PublicEnumNameOrOptions] // Correct variable name used
     : never
+// --- End Corrected helper types ---
