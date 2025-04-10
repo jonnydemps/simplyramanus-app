@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Database } from '@/lib/database.types.ts'; // Assuming correct path
+import { Database } from '@/lib/database.types';
 import Link from 'next/link'; // Added Link import based on JSX usage
 
 // --- Corrected Type Definition ---
