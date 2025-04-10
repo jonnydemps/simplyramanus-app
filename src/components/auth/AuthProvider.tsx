@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'; // Added useCallback
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'; // Add useMemo here
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
