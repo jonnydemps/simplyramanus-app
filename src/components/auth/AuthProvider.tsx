@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 
-// Profile type (ensure this matches database.types.ts and your actual schema)
+// Profile type should match your database.types.ts
 type Profile = {
   id: string;
   company_name: string;
@@ -29,7 +29,7 @@ const defaultAuthContextValue: AuthContextType = {
   session: null,
   profile: null,
   signOut: async () => {},
-  isLoading: true, // Start loading initially
+  isLoading: true,
 };
 
 const AuthContext = createContext<AuthContextType>(defaultAuthContextValue);
@@ -41,115 +41,145 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // Memoized fetchProfile function
+  // fetchProfile function remains the same
   const fetchProfile = useCallback(async (userId: string | undefined) => {
-    // Added check for isMounted flag at the beginning if needed, but managing via useEffect cleanup is typical
     if (!userId) {
-        console.log("AuthProvider: fetchProfile called without userId, clearing profile.");
-        setProfile(null); // Clear profile if no user ID
-        return;
+      console.log("AuthProvider: fetchProfile called without userId, clearing profile.");
+      setProfile(null);
+      return;
     }
-
-    console.log(`AuthProvider: Fetching profile for user ID: ${userId}`); // Debug log
+    console.log(`AuthProvider: Fetching profile for user ID: ${userId}`);
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, company_name, contact_email, contact_phone, is_admin, created_at, updated_at')
-        .eq('id', userId) // Correct: Filter by 'id' column
+        .eq('id', userId)
         .single();
 
       if (profileError) {
-        if (profileError.code === 'PGRST116') { // Profile not found / RLS denies row
-           console.warn(`AuthProvider: Profile not found for user ${userId} or RLS denied access. Trigger might not have run or RLS incorrect.`);
+        if (profileError.code === 'PGRST116') {
+          console.warn(`AuthProvider: Profile not found for user ${userId} or RLS denied access.`);
         } else {
-           console.error('AuthProvider: Error fetching profile:', profileError);
+          console.error('AuthProvider: Error fetching profile:', profileError);
         }
-        setProfile(null); // Set profile to null if error or not found
+        setProfile(null);
       } else {
-        console.log("AuthProvider: Profile data fetched:", profileData); // Debug log
-        setProfile(profileData as Profile); // Assuming data structure matches
+        console.log("AuthProvider: Profile data fetched:", profileData);
+        setProfile(profileData as Profile);
       }
     } catch (catchError) {
-        console.error("AuthProvider: Caught exception fetching profile:", catchError);
-        setProfile(null); // Clear profile on exception
+      console.error("AuthProvider: Caught exception fetching profile:", catchError);
+      setProfile(null);
     }
-  }, []); // Dependencies for useCallback (supabase client is stable)
+  }, []);
 
-  // Effect solely for onAuthStateChange listener - handles initial state too
+
+  // Effect solely for onAuthStateChange listener
   useEffect(() => {
-      let isMounted = true; // Flag to prevent state updates after unmount
-      console.log("AuthProvider: Setting up onAuthStateChange listener (sole handler).");
+    let isMounted = true;
+    console.log("AuthProvider: Setting up onAuthStateChange listener (sole handler).");
+    let initialCheckDone = false;
 
-      // Flag to ensure setIsLoading(false) only called once after initial check
-      let initialCheckDone = false;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (!isMounted) return;
+        console.log("AuthProvider: Auth state changed:", _event, session ? "Got session" : "No session");
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (_event, session) => {
-              // Ignore updates if component is unmounted
-              if (!isMounted) {
-                  console.log("AuthProvider: Unmounted, ignoring auth state change.");
-                  return;
-              }
-              console.log("AuthProvider: Auth state changed:", _event, session ? "Got session" : "No session");
+        let currentSession = session;
+        let profileUserId = session?.user?.id;
 
-              // Update session and user state regardless
-              setSession(session);
-              setUser(session?.user ?? null);
+        // --- TRY EXPLICIT REFRESH ON INITIAL/SIGN_IN EVENTS ---
+        // Only attempt if we received a session and it wasn't just due to a refresh completing
+        if (currentSession && (_event === 'INITIAL_SESSION' || _event === 'SIGNED_IN')) {
+             console.log(`AuthProvider: Attempting explicit token refresh for event: ${_event}`);
+             // refreshSession uses the token stored internally by the client
+             const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
 
-              // --- ADDED LOGS BEFORE FETCH ---
-              if (session) {
-                  const expiresIn = session.expires_at ? (session.expires_at * 1000 - Date.now()) / 1000 : 'N/A';
-                  console.log(`AuthProvider: Session details before fetch - User ID: ${session.user.id}, ExpiresIn: ${expiresIn}s`);
-              } else {
-                  console.log("AuthProvider: No session before fetch.");
-              }
-              // --- END ADDED LOGS ---
+             if (refreshError) {
+                 console.error("AuthProvider: Explicit refresh failed:", refreshError.message);
+                 // If refresh fails (e.g., token truly invalid), sign out
+                 if (isMounted) { // Check mount status again before async operation result
+                    await supabase.auth.signOut();
+                    // State updates (session, user, profile) will be handled by the SIGNED_OUT event firing
+                    currentSession = null; // Ensure subsequent logic uses null session
+                    profileUserId = undefined;
+                 }
+             } else if (refreshData.session) {
+                 console.log("AuthProvider: Explicit refresh succeeded.");
+                 currentSession = refreshData.session; // Use the potentially newer session
+                 profileUserId = currentSession.user.id;
+                 // Update state immediately with refreshed data *before* fetchProfile
+                 // This might cause an extra re-render but ensures fetchProfile uses latest user ID
+                 setSession(currentSession); 
+                 setUser(currentSession.user ?? null);
+             } else {
+                 // If refresh succeeds but returns no session (edge case?)
+                 console.warn("AuthProvider: Refresh returned no error but also no session?");
+                 if (isMounted) {
+                    await supabase.auth.signOut();
+                    currentSession = null;
+                    profileUserId = undefined;
+                 }
+             }
+        }
+        // --- END EXPLICIT REFRESH ---
 
-              // Fetch profile based on the current session state
-              // fetchProfile handles the case where session?.user?.id is undefined
-              await fetchProfile(session?.user?.id);
+        // Ensure state reflects the potentially updated session before fetching profile
+        // Checking mount status again before state updates triggered by the listener itself
+         if (!isMounted) return;
+         setSession(currentSession); 
+         setUser(currentSession?.user ?? null);
+         
+         // Log details *after* potential refresh attempt
+         if (currentSession) {
+             const expiresIn = currentSession.expires_at ? (currentSession.expires_at * 1000 - Date.now()) / 1000 : 'N/A';
+             console.log(`AuthProvider: Session details before fetch - User ID: ${profileUserId}, ExpiresIn: ${expiresIn}s`);
+         } else {
+             console.log("AuthProvider: No session before fetch.");
+         }
 
-              // Crucially, mark loading as false *after* the first event is processed
-              if (!initialCheckDone) {
-                  console.log("AuthProvider: Initial auth state processed, setting loading false.");
-                  setIsLoading(false);
-                  initialCheckDone = true;
-              }
-          }
-      );
+        // Fetch profile based on the final user ID (could be undefined if refresh failed)
+        // If profileUserId is undefined, fetchProfile will handle it gracefully
+        await fetchProfile(profileUserId);
 
-      // Cleanup function for listener
-      return () => {
-          console.log("AuthProvider: Unsubscribing from onAuthStateChange.");
-          isMounted = false; // Set flag on unmount
-          subscription.unsubscribe();
-      };
-  // Rerun effect only if fetchProfile reference changes (it shouldn't with useCallback)
-  // Removed router dependency as refresh() wasn't used inside here
-  }, [fetchProfile]);
+        // Set loading false after the first event is processed and profile fetch is attempted/completed
+        if (!initialCheckDone) {
+          console.log("AuthProvider: Initial auth state processed, setting loading false.");
+          setIsLoading(false);
+          initialCheckDone = true;
+        }
+      }
+    );
 
-  // signOut function (memoized)
+    // Cleanup function for listener
+    return () => {
+      console.log("AuthProvider: Unsubscribing from onAuthStateChange.");
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  // Rerun effect only if fetchProfile reference changes
+  }, [fetchProfile]); // Removed router dependency as it wasn't used here
+
+  // signOut function
   const signOut = useCallback(async () => {
-      console.log("AuthProvider: Signing out.");
-      setIsLoading(true); // Indicate loading during sign out process
-      await supabase.auth.signOut();
-      // onAuthStateChange listener will handle setting user/session/profile to null
-      // and setting isLoading to false after the SIGNED_OUT event is processed.
-      router.push('/signin'); // Redirect after sign out request initiated
+    console.log("AuthProvider: Signing out.");
+    setIsLoading(true);
+    await supabase.auth.signOut();
+    // Let onAuthStateChange handle state clearing and setting isLoading false
+    router.push('/signin');
   }, [router]);
 
   // Memoized context value
   const value = useMemo(() => ({
-      user,
-      session,
-      profile,
-      signOut,
-      isLoading
+    user,
+    session,
+    profile,
+    signOut,
+    isLoading
   }), [user, session, profile, signOut, isLoading]);
 
   return (
     <AuthContext.Provider value={value}>
-      {/* Show loading indicator until the initial auth state is determined */}
       {!isLoading ? children : <div>Loading...</div>}
     </AuthContext.Provider>
   );
@@ -159,7 +189,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-      throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
