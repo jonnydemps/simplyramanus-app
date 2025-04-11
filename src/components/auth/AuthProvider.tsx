@@ -1,135 +1,34 @@
-'use client';
-
-import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Session, User } from '@supabase/supabase-js';
-import { useRouter } from 'next/navigation';
-
-// Profile type remains the same
-type Profile = {
-  id: string;
-  company_name: string;
-  contact_email: string;
-  contact_phone?: string | null;
-  is_admin: boolean;
-  created_at?: string | null;
-  updated_at?: string | null;
-};
-
-type AuthContextType = {
-  user: User | null;
-  session: Session | null;
-  profile: Profile | null;
-  signOut: () => Promise<void>;
-  isLoading: boolean;
-};
-
-const defaultAuthContextValue: AuthContextType = {
-  user: null,
-  session: null,
-  profile: null,
-  signOut: async () => {},
-  isLoading: true,
-};
-
-const AuthContext = createContext<AuthContextType>(defaultAuthContextValue);
-
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-
-  // fetchProfile function remains the same
-  const fetchProfile = useCallback(async (userId: string | undefined) => {
-    if (!userId) {
-      console.log("AuthProvider: fetchProfile called without userId, clearing profile.");
-      setProfile(null);
-      return;
-    }
-    console.log(`AuthProvider: Fetching profile for user ID: ${userId}`);
-    try {
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, company_name, contact_email, contact_phone, is_admin, created_at, updated_at')
-        .eq('id', userId)
-        .single();
-
-      if (profileError) {
-        if (profileError.code === 'PGRST116') {
-           console.warn(`AuthProvider: Profile not found for user ${userId} or RLS denied access.`);
-        } else {
-           console.error('AuthProvider: Error fetching profile:', profileError);
-        }
-        setProfile(null);
-      } else {
-        console.log("AuthProvider: Profile data fetched:", profileData);
-        setProfile(profileData as Profile);
-      }
-    } catch (catchError) {
-      console.error("AuthProvider: Caught exception fetching profile:", catchError);
-      setProfile(null);
-    }
-  }, []);
-
-
-  // Effect solely for onAuthStateChange listener (REMOVED explicit refresh)
-  useEffect(() => {
-      let isMounted = true;
-      console.log("AuthProvider: Setting up onAuthStateChange listener (V3 - No explicit refresh).");
-      let initialCheckDone = false;
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (_event, session) => {
-              if (!isMounted) return;
-              console.log("AuthProvider: Auth state changed (V3):", _event, session ? "Got session" : "No session");
-
-              setSession(session);
-              setUser(session?.user ?? null);
-              const profileUserId = session?.user?.id;
-
-              // Log session details before fetch
-              if (session) {
-                  const expiresIn = session.expires_at ? (session.expires_at * 1000 - Date.now()) / 1000 : 'N/A';
-                  console.log(`AuthProvider: Session details before fetch (V3) - User ID: ${profileUserId}, ExpiresIn: ${expiresIn}s`);
-              } else {
-                  console.log("AuthProvider: No session before fetch (V3).");
-              }
-
-              // Fetch profile based on the current user ID
-              console.log(`AuthProvider: >>> Calling fetchProfile for ${profileUserId} (V3)...`); // Log BEFORE await
-              await fetchProfile(profileUserId);
-              console.log(`AuthProvider: <<< fetchProfile call completed for ${profileUserId} (V3).`); // Log AFTER await
-
-              // Set loading false after first event processed
-              if (!initialCheckDone) {
-                  console.log("AuthProvider: Initial auth state processed, setting loading false (V3).");
-                  setIsLoading(false);
-                  initialCheckDone = true;
-              }
-          }
-      );
-
-      // Cleanup function for listener
-      return () => {
-          console.log("AuthProvider: Unsubscribing from onAuthStateChange.");
-          isMounted = false;
-          subscription.unsubscribe();
-      };
-  }, [fetchProfile]); // Removed router dependency again
-
-  // signOut function remains the same
-  const signOut = useCallback(async () => { /* ... */ }, [router]);
-  // Memoized context value remains the same
-  const value = useMemo(() => ({ /* ... */ }), [user, session, profile, signOut, isLoading]);
-
-  return (
-      <AuthContext.Provider value={value}>
-          {!isLoading ? children : <div>Loading...</div>}
-      </AuthContext.Provider>
-  );
-};
-
-// useAuth hook remains the same
-export const useAuth = () => { /* ... */ };
+[20:58:12.460] Cloning github.com/jonnydemps/simplyramanus-app (Branch: main, Commit: 7bee183)
+[20:58:13.339] Cloning completed: 878.000ms
+[20:58:14.988] Restored build cache from previous deployment (3HpTo9q2LXkR9tfft6xUkUUefpjf)
+[20:58:15.091] Running build in Washington, D.C., USA (East) – iad1
+[20:58:15.460] Running "vercel build"
+[20:58:15.852] Vercel CLI 41.5.0
+[20:58:16.186] Installing dependencies...
+[20:58:17.910] 
+[20:58:17.911] up to date in 1s
+[20:58:17.911] 
+[20:58:17.912] 146 packages are looking for funding
+[20:58:17.912]   run `npm fund` for details
+[20:58:17.944] Detected Next.js version: 14.2.28
+[20:58:17.947] Running "npm run build"
+[20:58:18.062] 
+[20:58:18.063] > simplyra@0.1.0 build
+[20:58:18.063] > next build
+[20:58:18.063] 
+[20:58:19.096]   ▲ Next.js 14.2.28
+[20:58:19.097] 
+[20:58:19.168]    Creating an optimized production build ...
+[20:58:26.163]  ✓ Compiled successfully
+[20:58:26.164]    Linting and checking validity of types ...
+[20:58:31.137] 
+[20:58:31.140] Failed to compile.
+[20:58:31.141] 
+[20:58:31.141] ./src/components/auth/AuthProvider.tsx
+[20:58:31.141] 3:25  Error: 'useContext' is defined but never used.  @typescript-eslint/no-unused-vars
+[20:58:31.141] 123:58  Warning: React Hook useCallback has an unnecessary dependency: 'router'. Either exclude it or remove the dependency array.  react-hooks/exhaustive-deps
+[20:58:31.141] 125:48  Warning: React Hook useMemo has unnecessary dependencies: 'isLoading', 'profile', 'session', 'signOut', and 'user'. Either exclude them or remove the dependency array.  react-hooks/exhaustive-deps
+[20:58:31.141] 
+[20:58:31.141] info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
+[20:58:31.171] Error: Command "npm run build" exited with 1
+[20:58:31.406] 
