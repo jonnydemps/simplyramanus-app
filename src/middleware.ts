@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 export async function middleware(req: NextRequest) {
-  // Use const - cookie handlers mutate response.cookies, not reassign response
+  // Use const - cookie handlers mutate response.cookies
   const response = NextResponse.next({
     request: {
       headers: req.headers,
@@ -22,7 +22,7 @@ export async function middleware(req: NextRequest) {
     }
   );
 
-  // Get session to handle cookies
+  // Call getSession to handle cookie sync
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   const { pathname } = req.nextUrl;
@@ -37,7 +37,9 @@ export async function middleware(req: NextRequest) {
       pathname === '/favicon.ico' ||
       pathname.startsWith('/api/webhooks/');
 
-  // Only redirect logged-out users from protected paths
+  // --- ONLY Protect Non-Public Paths for Logged-Out Users ---
+  // If the user is NOT logged in AND they are trying to access a path
+  // that IS NOT public, redirect them to signin.
   if (!user && !isPublicPath) {
     console.log(`Middleware: No user, accessing protected path ${pathname}, redirecting to /signin`);
     const url = req.nextUrl.clone();
@@ -45,8 +47,12 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Allow all other requests through
-  return response;
+  // --- REMOVED ALL OTHER REDIRECT LOGIC ---
+  // Allow ALL other requests through. The client-side AuthRedirector
+  // component will handle redirecting logged-in users away from /signin
+  // or non-admins away from /admin based on the loaded AuthProvider state.
+
+  return response; // Return the response (potentially with updated cookies)
 }
 
 // Matcher config
