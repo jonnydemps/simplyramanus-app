@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import { Inter, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import AuthRedirector from '@/components/auth/AuthRedirector'; // 1. Import the new component
 
 const inter = Inter({
-  variable: "--font-geist-sans",
+  variable: "--font-geist-sans", // Ensure these variable names are used in your CSS (e.g., Tailwind config)
   subsets: ["latin"],
 });
 
 const robotoMono = Roboto_Mono({
-  variable: "--font-geist-mono",
+  variable: "--font-geist-mono", // Ensure these variable names are used in your CSS
   subsets: ["latin"],
 });
 
@@ -25,10 +26,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${inter.variable} ${robotoMono.variable} antialiased`}
-      >
-        <AuthProvider>{children}</AuthProvider>
+      {/* Combine font variables and any other base body classes */}
+      <body className={`${inter.variable} ${robotoMono.variable} antialiased`}>
+        <AuthProvider>
+          {/* 2. Wrap the children with AuthRedirector INSIDE AuthProvider */}
+          <AuthRedirector>
+            {children}
+          </AuthRedirector>
+        </AuthProvider>
       </body>
     </html>
   );
