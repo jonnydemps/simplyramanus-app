@@ -3,8 +3,8 @@ import type { NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 export async function middleware(req: NextRequest) {
-  // Start with the basic response object
-  let response = NextResponse.next({
+  // Use const here - the object's properties (cookies) can still be mutated
+  const response = NextResponse.next({
     request: {
       headers: req.headers,
     },
@@ -19,25 +19,20 @@ export async function middleware(req: NextRequest) {
           return req.cookies.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
-          // Important: The `set` method from `createServerClient` needs to be able
-          // to modify the cookies of the *response* object.
-          // We directly modify the `response` object created at the start.
+          // Mutates the cookies property of the existing 'response' object
           response.cookies.set({ name, value, ...options });
         },
         remove(name: string, options: CookieOptions) {
-          // Same as above, modify the response object directly.
+          // Mutates the cookies property of the existing 'response' object
           response.cookies.set({ name, value: '', ...options });
         },
       },
     }
   );
 
-  // Crucial: Refresh session cookies by calling getSession().
-  // This allows the server client to potentially refresh tokens and set cookies
-  // on the 'response' object before we make decisions.
-  // We get the user data from the session returned here.
+  // Always get the session to allow the ssr client to potentially set cookies
   const { data: { session } } = await supabase.auth.getSession();
-  const user = session?.user; // Extract user from session
+  const user = session?.user; // Get user from the session result
 
   const { pathname } = req.nextUrl;
 
@@ -51,7 +46,7 @@ export async function middleware(req: NextRequest) {
       pathname === '/favicon.ico' ||
       pathname.startsWith('/api/webhooks/');
 
-  // If user is NOT logged in and trying to access a non-public path
+  // If user is NOT logged in AND accessing a non-public path, redirect
   if (!user && !isPublicPath) {
     console.log(`Middleware: No user, accessing protected path ${pathname}, redirecting to /signin`);
     const url = req.nextUrl.clone();
@@ -59,21 +54,22 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // If user IS logged in and tries to access signin/signup
-  // Let's keep this redirect logic client-side for now to isolate the main issue
-  // if (user && (pathname.startsWith('/signin') || pathname.startsWith('/signup'))) {
-  //    return NextResponse.redirect(new URL('/dashboard', req.url));
-  // }
-
-
-  // If we reach here, the user is either authenticated OR accessing a public path.
-  // Allow the request to proceed and return the potentially modified response (with cookies).
-  return response;
+  // Allow all other requests to proceed
+  // Client-side logic handles redirecting logged-in users from auth pages
+  // and checking admin role for admin pages.
+  return response; // Return the response object (potentially with updated cookies)
 }
 
-// Matcher config remains the same
+// Matcher config
 export const config = {
   matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api/auth (Supabase internal auth routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
     '/((?!api/auth|_next/static|_next/image|favicon.ico).*)',
   ],
 };
