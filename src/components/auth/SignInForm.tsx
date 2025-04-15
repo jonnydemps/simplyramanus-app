@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-// REMOVED useRouter import - not needed anymore
-// import { useRouter } from 'next/navigation';
+// No useRouter needed as AuthRedirector handles navigation
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 
@@ -11,11 +10,9 @@ export default function SignInForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  // REMOVED router hook call
-  // const router = useRouter();
+  // const router = useRouter(); // Not needed here
 
-  // REMOVED incorrect eslint-disable comment from above this line
-  const handleSignIn = async (e: React.FormEvent) => { // Function IS used by onSubmit
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -31,26 +28,26 @@ export default function SignInForm() {
       }
 
       if (data?.user) {
-        // Optional: Fetch admin status for logging or immediate feedback
-        // AuthRedirector will handle the actual routing based on AuthProvider state
+        // Optional: Fetch admin status here just for logging or immediate checks if needed.
+        // The actual redirect logic is handled by AuthRedirector based on AuthProvider state.
         console.log("SignInForm: Fetching admin status for user:", data.user.id);
         const { data: profileData, error: profileError } = await supabase
           .from('profiles').select('is_admin').eq('id', data.user.id).single();
 
         if (profileError) {
             console.error("SignInForm: Error fetching admin status:", profileError.message);
-            // Don't redirect here, just log
         } else if (profileData?.is_admin) {
             console.log("SignInForm: Sign in successful for ADMIN user. AuthRedirector will handle navigation.");
         } else {
             console.log("SignInForm: Sign in successful for NON-ADMIN user. AuthRedirector will handle navigation.");
         }
-        // NO REDIRECTS HERE
-
+        // Set loading false here to reset button state after successful background processing
+        setLoading(false);
       } else {
-         console.error("SignInForm: Sign in succeeded but no user data found.");
+         // Should not happen if signInError is null, but handle defensively
+         console.error("SignInForm: Sign in succeeded but no user data found in response.");
          setError("Sign in succeeded but failed to retrieve user data.");
-         setLoading(false); // Stop loading if no user data found
+         setLoading(false); // Also stop loading here
       }
     } catch (err: unknown) {
          let message = 'An error occurred. Please check credentials.';
@@ -60,8 +57,8 @@ export default function SignInForm() {
          setError(message);
          setLoading(false); // Stop loading on error
     }
-     // Don't set loading false on success here, let AuthRedirector handle visual state change implicitly
-  }; // Semicolon
+    // No finally block needed if all paths handle setLoading
+  };
 
   // --- JSX ---
   return (
