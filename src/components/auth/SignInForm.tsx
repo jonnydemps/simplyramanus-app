@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation'; // Keep router import
+// REMOVED useRouter import - not needed anymore
+// import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 
@@ -10,10 +11,11 @@ export default function SignInForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter(); // Keep router hook
+  // REMOVED router hook call
+  // const router = useRouter();
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars // Keep disable comment for now
-  const handleSignIn = async (e: React.FormEvent) => {
+  // REMOVED incorrect eslint-disable comment from above this line
+  const handleSignIn = async (e: React.FormEvent) => { // Function IS used by onSubmit
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -29,33 +31,39 @@ export default function SignInForm() {
       }
 
       if (data?.user) {
-        // Optional: Fetch admin status if needed immediately, otherwise AuthRedirector handles redirects
+        // Optional: Fetch admin status for logging or immediate feedback
+        // AuthRedirector will handle the actual routing based on AuthProvider state
         console.log("SignInForm: Fetching admin status for user:", data.user.id);
         const { data: profileData, error: profileError } = await supabase
           .from('profiles').select('is_admin').eq('id', data.user.id).single();
 
-        if (profileError) { console.error("SignInForm: Error fetching admin status:", profileError.message); }
-        else if (profileData?.is_admin) { console.log("SignInForm: Sign in successful for ADMIN user."); }
-        else { console.log("SignInForm: Sign in successful for NON-ADMIN user."); }
+        if (profileError) {
+            console.error("SignInForm: Error fetching admin status:", profileError.message);
+            // Don't redirect here, just log
+        } else if (profileData?.is_admin) {
+            console.log("SignInForm: Sign in successful for ADMIN user. AuthRedirector will handle navigation.");
+        } else {
+            console.log("SignInForm: Sign in successful for NON-ADMIN user. AuthRedirector will handle navigation.");
+        }
+        // NO REDIRECTS HERE
 
-        // NO REDIRECTS HERE - AuthRedirector handles this after state updates
       } else {
          console.error("SignInForm: Sign in succeeded but no user data found.");
          setError("Sign in succeeded but failed to retrieve user data.");
-         setLoading(false);
+         setLoading(false); // Stop loading if no user data found
       }
     } catch (err: unknown) {
-         let message = 'An error occurred during sign in. Please check your credentials.';
+         let message = 'An error occurred. Please check credentials.';
          if (typeof err === 'object' && err !== null && 'message' in err) { message = err.message as string; }
          else if (err instanceof Error) { message = err.message; }
          console.error("SignInForm: Sign in catch block:", err);
          setError(message);
-         setLoading(false);
+         setLoading(false); // Stop loading on error
     }
-     // Let AuthProvider/AuthRedirector handle final loading state and redirects
-  }; // Semicolon is correct here
+     // Don't set loading false on success here, let AuthRedirector handle visual state change implicitly
+  }; // Semicolon
 
-  // --- RESTORED JSX ---
+  // --- JSX ---
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
