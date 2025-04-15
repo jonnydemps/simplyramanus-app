@@ -4,11 +4,12 @@ import { useAuth } from '@/components/auth/AuthProvider'; // Adjust path if need
 import { usePathname, useRouter } from 'next/navigation';
 
 // Define public paths accessible when logged OUT
-const publicPaths = ['/signin', '/signup', '/reset-password'];
+const publicPaths = ['/signin', '/signup', '/reset-password', '/auth/callback']; // Added callback
 // Define paths accessible ONLY by admins
-const adminPaths = ['/admin']; // Add '/admin/...' if needed
-// Define paths for regular logged-in users (non-admin)
-const protectedPaths = ['/dashboard', '/formulations', '/payment']; // Add '/formulations/upload', etc.
+const adminPaths = ['/admin']; // Add '/admin/...' patterns if needed
+
+// REMOVED unused protectedPaths definition
+// const protectedPaths = ['/dashboard', '/formulations', '/payment']; 
 
 export default function AuthRedirector({ children }: { children: React.ReactNode }) {
   const { user, profile, isLoading } = useAuth();
@@ -18,49 +19,43 @@ export default function AuthRedirector({ children }: { children: React.ReactNode
   useEffect(() => {
     if (isLoading) {
       console.log("AuthRedirector: Auth state loading...");
-      return; // Wait for auth state to load
+      return;
     }
 
     const isPublic = publicPaths.some(p => pathname.startsWith(p));
-    const isAdminPath = adminPaths.some(p => pathname.startsWith(p));
-    // Add check for root path '/' explicitly if it should be treated differently
-    const isRoot = pathname === '/'; 
+    const isAdminPath = adminPaths.some(p => pathname === p || pathname.startsWith(p + '/'));
+    const isRoot = pathname === '/';
 
-    console.log(`AuthRedirector: Check - User: ${!!user}, Admin: ${profile?.is_admin}, Path: ${pathname}`);
+    console.log(`AuthRedirector: Check - User: ${!!user}, Admin: ${profile?.is_admin}, Path: ${pathname}, isPublic: ${isPublic}, isAdminPath: ${isAdminPath}`);
 
     if (user) {
-      // --- User is Logged In ---
+      // User IS logged in
       const isAdmin = profile?.is_admin ?? false;
 
       if (isPublic) {
-        // Logged in, but on a public auth page (signin/signup/reset) -> redirect
         const target = isAdmin ? '/admin' : '/dashboard';
         console.log(`AuthRedirector: User on public auth page (${pathname}), redirecting to ${target}`);
         router.replace(target);
       } else if (isAdminPath && !isAdmin) {
-        // Logged in, NOT admin, but on an admin path -> redirect
         console.log(`AuthRedirector: Non-admin on admin path (${pathname}), redirecting to /dashboard`);
         router.replace('/dashboard');
       }
-      // Allow admins on admin paths
-      // Allow non-admins on non-admin protected paths and root
-      // Allow admins on non-admin protected paths and root
+      // Allow admins on admin paths & non-admins on non-admin protected paths
 
     } else {
-      // --- User is Logged Out ---
-      // Middleware should handle redirecting from protected paths,
-      // but this is a client-side fallback. Allow public paths and root.
+      // User IS NOT logged in
+      // Allow access only to public paths and root
       if (!isPublic && !isRoot) {
           console.log(`AuthRedirector: No user on protected path (${pathname}), redirecting to /signin`);
           router.replace('/signin');
       }
     }
-  }, [isLoading, user, profile, pathname, router]); // Re-run when auth state or path changes
+  }, [isLoading, user, profile, pathname, router]);
 
-  // Render children only after loading complete to prevent flashes, or show a global spinner
+  // Render children or loading state
   if (isLoading) {
       return <div>Loading Application...</div>; // Or your global loading spinner
   }
 
-  return <>{children}</>; // Render the actual page content
+  return <>{children}</>;
 }

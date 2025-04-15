@@ -3,7 +3,12 @@ import type { NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 export async function middleware(req: NextRequest) {
-  let response = NextResponse.next({ request: { headers: req.headers } });
+  // Use const - cookie handlers mutate response.cookies, not reassign response
+  const response = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,12 +22,12 @@ export async function middleware(req: NextRequest) {
     }
   );
 
-  // Crucial: Call getSession() to handle cookies, maybe refresh tokens
+  // Get session to handle cookies
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
   const { pathname } = req.nextUrl;
 
-  // Define paths accessible WITHOUT a user session
+  // Define public paths
   const isPublicPath =
       pathname === '/' ||
       pathname.startsWith('/signin') ||
@@ -30,9 +35,9 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith('/reset-password') ||
       pathname === '/auth/callback' ||
       pathname === '/favicon.ico' ||
-      pathname.startsWith('/api/webhooks/'); // Allow necessary public paths
+      pathname.startsWith('/api/webhooks/');
 
-  // --- ONLY Protect Non-Public Paths for Logged-Out Users ---
+  // Only redirect logged-out users from protected paths
   if (!user && !isPublicPath) {
     console.log(`Middleware: No user, accessing protected path ${pathname}, redirecting to /signin`);
     const url = req.nextUrl.clone();
@@ -40,11 +45,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Allow ALL other requests through. Client-side will handle other redirects.
+  // Allow all other requests through
   return response;
 }
 
-// Matcher config (ensure it covers paths you want middleware to run on)
+// Matcher config
 export const config = {
   matcher: [
     '/((?!api/auth|_next/static|_next/image|favicon.ico).*)',
