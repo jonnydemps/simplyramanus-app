@@ -1,12 +1,12 @@
 'use client';
 
-// Import useRef, remove unused createContext from main import
-import React, { useEffect, useState, useCallback, useMemo, useContext, useRef } from 'react';
+// Ensure all necessary hooks are imported from React
+import React, { createContext, useEffect, useState, useCallback, useMemo, useContext, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 
-// Profile type
+// Profile type (ensure this matches database.types.ts and your actual schema)
 type Profile = {
   id: string;
   company_name: string;
@@ -30,10 +30,10 @@ const defaultAuthContextValue: AuthContextType = {
   session: null,
   profile: null,
   signOut: async () => {},
-  isLoading: true,
+  isLoading: true, // Start loading initially
 };
 
-// Use React.createContext
+// Use React.createContext directly here
 const AuthContext = React.createContext<AuthContextType>(defaultAuthContextValue);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // fetchProfile using direct fetch API
+  // fetchProfile using direct fetch API (with type/lint fixes from previous step)
   const fetchProfile = useCallback(async (userId: string | undefined, currentSession: Session | null) => {
     if (!userId || !currentSession?.access_token) {
       console.log("AuthProvider (Direct Fetch): fetchProfile called without userId or session/token, clearing profile.");
@@ -79,7 +79,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         try {
             errorPayload = await response.json();
             console.error('AuthProvider: Direct fetch Supabase error payload:', errorPayload);
-        } catch { // Removed unused variable name '_e'
+        } catch { // Removed unused _e variable name
             const textError = await response.text();
             console.error('AuthProvider: Could not parse error response body:', textError);
             errorPayload.message = textError || errorPayload.message;
@@ -114,7 +114,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("AuthProvider: Setting up onAuthStateChange listener (V5 - Lint Fixes).");
       let initialCheckDone = false;
 
-      // Use underscore prefix for unused subscription variable in main body
+      // Use underscore prefix for unused subscription variable
       const { data: { subscription: _subscription } } = supabase.auth.onAuthStateChange(
           async (_event, session) => {
               // Use ref to check mount status
@@ -128,8 +128,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               setUser(session?.user ?? null);
               const profileUserId = session?.user?.id;
 
-              if (session) { /* ... logging session details ... */ }
-              else { /* ... logging no session ... */ }
+              if (session) {
+                  const expiresIn = session.expires_at ? (session.expires_at * 1000 - Date.now()) / 1000 : 'N/A';
+                  console.log(`AuthProvider: Session details before fetch (V5) - User ID: ${profileUserId}, ExpiresIn: ${expiresIn}s`);
+              } else {
+                  console.log("AuthProvider: No session before fetch (V5).");
+              }
 
               console.log(`AuthProvider: >>> Calling fetchProfile (direct fetch) for ${profileUserId} (V5)...`);
               await fetchProfile(profileUserId, session);
@@ -152,12 +156,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [fetchProfile]); // Dependency array
 
   // signOut function
-  const signOut = useCallback(async () => { /* ... as before ... */ }, [router]);
-  // Memoized context value
-  const value = useMemo(() => ({ /* ... as before ... */ }), [/* ... dependencies ... */]);
+  const signOut = useCallback(async () => {
+      console.log("AuthProvider: Signing out.");
+      setIsLoading(true); // Indicate loading
+      await supabase.auth.signOut();
+      // Let onAuthStateChange handle setting user/profile to null and isLoading to false
+      router.push('/signin');
+  }, [router]); // Keep router dependency
 
-  return ( /* ... JSX ... */ );
+  // Memoized context value
+  // Ignore exhaustive-deps warning if lint complains; these deps are correct
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const value = useMemo(() => ({
+      user,
+      session,
+      profile,
+      signOut,
+      isLoading
+  }), [user, session, profile, signOut, isLoading]); // These dependencies ARE correct
+
+  // --- RESTORED JSX HERE ---
+  return (
+      <AuthContext.Provider value={value}>
+          {!isLoading ? children : <div>Loading...</div>} {/* Basic loading indicator */}
+      </AuthContext.Provider>
+  );
 };
 
 // useAuth hook
-export const useAuth = () => { /* ... as before ... */ };
+export const useAuth = () => {
+  const context = useContext(AuthContext); // Use standard useContext from React import
+  if (context === undefined) {
+      throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
