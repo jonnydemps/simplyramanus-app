@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-// Removed useRouter as it's replaced by window.location
-// import { useRouter } from 'next/navigation'; 
+import { useRouter } from 'next/navigation'; // Re-add import
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 
@@ -11,7 +10,7 @@ export default function SignInForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  // const router = useRouter(); // No longer needed
+  const router = useRouter(); // Re-add hook call
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,38 +26,36 @@ export default function SignInForm() {
 
       // Handle sign-in specific errors first
       if (signInError) {
-        throw signInError; 
+        throw signInError;
       }
 
       // Check if user data exists after successful sign in
       if (data?.user) {
         // Check if user is admin using the correct 'id' column
-        console.log("SignInForm: Fetching admin status for user:", data.user.id); 
+        console.log("SignInForm: Fetching admin status for user:", data.user.id);
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('is_admin')
-          .eq('id', data.user.id) // Use 'id' column
+          .eq('id', data.user.id) // Correct: Use 'id' column
           .single();
 
         // Handle potential error fetching profile
         if (profileError) {
           console.error("SignInForm: Error fetching admin status:", profileError.message);
           // Default redirect to dashboard if admin status check fails
-          console.log("SignInForm: Redirecting (assign) to /dashboard due to profile fetch error.");
-          window.location.assign('/dashboard'); // Use assign for full navigation
-        } else if (profileData?.is_admin) { 
-          console.log("SignInForm: User is admin, redirecting (assign) to /admin"); 
-          window.location.assign('/admin'); // Use assign for full navigation
+          console.log("SignInForm: Redirecting (push) to /dashboard due to profile fetch error.");
+          router.push('/dashboard'); // Use router.push
+        } else if (profileData?.is_admin) {
+          console.log("SignInForm: User is admin, redirecting (push) to /admin");
+          router.push('/admin'); // Use router.push
         } else {
-          console.log("SignInForm: User is not admin, redirecting (assign) to /dashboard"); 
-          window.location.assign('/dashboard'); // Use assign for full navigation
+          console.log("SignInForm: User is not admin, redirecting (push) to /dashboard");
+          router.push('/dashboard'); // Use router.push
         }
-        // Note: Code execution stops here due to window.location.assign, 
-        // so setLoading(false) in finally might not run visibly, which is okay.
       } else {
          console.error("SignInForm: Sign in succeeded but no user data found in response.");
          setError("Sign in succeeded but failed to retrieve user data.");
-         setLoading(false); // Set loading false if we didn't redirect
+         setLoading(false); // Set loading false if no redirect
       }
 
     } catch (err: unknown) { // Catch block for sign-in errors
@@ -68,13 +65,12 @@ export default function SignInForm() {
       } else if (err instanceof Error) {
          message = err.message;
       }
-      console.error("SignInForm: Sign in catch block:", err); 
+      console.error("SignInForm: Sign in catch block:", err);
       setError(message);
       setLoading(false); // Set loading false on error
-    } 
-    // Removed finally block as navigation happens before it in success cases
-    // finally { setLoading(false); } 
-  }; // Semicolon added previously
+    }
+    // Loading state will implicitly be handled by navigation in success cases
+  }; // Semicolon
 
   // --- JSX for the form ---
   return (
@@ -89,72 +85,32 @@ export default function SignInForm() {
           <div className="rounded-md shadow-sm -space-y-px">
             {/* Email Input */}
             <div>
-              <label htmlFor="email-address" className="sr-only">
-                Email address
-              </label>
-              <input
-                id="email-address"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+              <label htmlFor="email-address" className="sr-only">Email address</label>
+              <input id="email-address" name="email" type="email" autoComplete="email" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             {/* Password Input */}
             <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <label htmlFor="password" className="sr-only">Password</label>
+              <input id="password" name="password" type="password" autoComplete="current-password" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
           </div>
 
           {/* Error Display */}
-          {error && (
-            <div className="text-red-500 text-sm mt-2">{error}</div>
-          )}
+          {error && (<div className="text-red-500 text-sm mt-2">{error}</div>)}
 
           {/* Links */}
           <div className="flex items-center justify-between">
             <div className="text-sm">
-              <Link
-                href="/reset-password"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
-                Forgot your password?
-              </Link>
+              <Link href="/reset-password" className="font-medium text-blue-600 hover:text-blue-500">Forgot your password?</Link>
             </div>
             <div className="text-sm">
-              <Link
-                href="/signup"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
-                Don&apos;t have an account? Sign up
-              </Link>
+              <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">Don&apos;t have an account? Sign up</Link>
             </div>
           </div>
 
           {/* Submit Button */}
           <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-            >
+            <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
