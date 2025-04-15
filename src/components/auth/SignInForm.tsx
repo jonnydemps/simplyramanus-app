@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+// Removed useRouter as it's replaced by window.location
+// import { useRouter } from 'next/navigation'; 
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 
@@ -10,7 +11,7 @@ export default function SignInForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  // const router = useRouter(); // No longer needed
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,51 +27,54 @@ export default function SignInForm() {
 
       // Handle sign-in specific errors first
       if (signInError) {
-        throw signInError; // Throw to be caught by the catch block
+        throw signInError; 
       }
 
       // Check if user data exists after successful sign in
       if (data?.user) {
         // Check if user is admin using the correct 'id' column
-        console.log("SignInForm: Fetching admin status for user:", data.user.id); // Debug log
+        console.log("SignInForm: Fetching admin status for user:", data.user.id); 
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('is_admin')
-          .eq('id', data.user.id) // Corrected: Use 'id' column
+          .eq('id', data.user.id) // Use 'id' column
           .single();
 
         // Handle potential error fetching profile
         if (profileError) {
           console.error("SignInForm: Error fetching admin status:", profileError.message);
           // Default redirect to dashboard if admin status check fails
-          router.push('/dashboard');
-        } else if (profileData?.is_admin) { // Check profileData exists
-          console.log("SignInForm: User is admin, redirecting to /admin"); // Debug log
-          router.push('/admin');
+          console.log("SignInForm: Redirecting (assign) to /dashboard due to profile fetch error.");
+          window.location.assign('/dashboard'); // Use assign for full navigation
+        } else if (profileData?.is_admin) { 
+          console.log("SignInForm: User is admin, redirecting (assign) to /admin"); 
+          window.location.assign('/admin'); // Use assign for full navigation
         } else {
-          console.log("SignInForm: User is not admin, redirecting to /dashboard"); // Debug log
-          router.push('/dashboard');
+          console.log("SignInForm: User is not admin, redirecting (assign) to /dashboard"); 
+          window.location.assign('/dashboard'); // Use assign for full navigation
         }
+        // Note: Code execution stops here due to window.location.assign, 
+        // so setLoading(false) in finally might not run visibly, which is okay.
       } else {
-         // This case should ideally not happen if signInError is null, but handle defensively
          console.error("SignInForm: Sign in succeeded but no user data found in response.");
          setError("Sign in succeeded but failed to retrieve user data.");
+         setLoading(false); // Set loading false if we didn't redirect
       }
 
-    } catch (err: unknown) { // Catch block for any error (signInError or profileError if re-thrown)
+    } catch (err: unknown) { // Catch block for sign-in errors
       let message = 'An error occurred during sign in. Please check your credentials.';
-      // Try to get message from Supabase error structure
       if (typeof err === 'object' && err !== null && 'message' in err) {
          message = err.message as string;
       } else if (err instanceof Error) {
-         message = err.message; // Fallback for standard errors
+         message = err.message;
       }
-      console.error("SignInForm: Sign in catch block:", err); // Log the actual error structure
+      console.error("SignInForm: Sign in catch block:", err); 
       setError(message);
-    } finally {
-      setLoading(false);
-    }
-  }; // <<<< SEMICOLON ADDED HERE
+      setLoading(false); // Set loading false on error
+    } 
+    // Removed finally block as navigation happens before it in success cases
+    // finally { setLoading(false); } 
+  }; // Semicolon added previously
 
   // --- JSX for the form ---
   return (
@@ -83,6 +87,7 @@ export default function SignInForm() {
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSignIn}>
           <div className="rounded-md shadow-sm -space-y-px">
+            {/* Email Input */}
             <div>
               <label htmlFor="email-address" className="sr-only">
                 Email address
@@ -99,6 +104,7 @@ export default function SignInForm() {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
+            {/* Password Input */}
             <div>
               <label htmlFor="password" className="sr-only">
                 Password
@@ -117,10 +123,12 @@ export default function SignInForm() {
             </div>
           </div>
 
+          {/* Error Display */}
           {error && (
             <div className="text-red-500 text-sm mt-2">{error}</div>
           )}
 
+          {/* Links */}
           <div className="flex items-center justify-between">
             <div className="text-sm">
               <Link
@@ -140,6 +148,7 @@ export default function SignInForm() {
             </div>
           </div>
 
+          {/* Submit Button */}
           <div>
             <button
               type="submit"
