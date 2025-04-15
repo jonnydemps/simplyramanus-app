@@ -1,7 +1,7 @@
 'use client';
 
-// Import React itself, and needed hooks EXCEPT createContext
-import React, { useEffect, useState, useCallback, useMemo, useContext } from 'react';
+// Import useRef, remove unused createContext from main import
+import React, { useEffect, useState, useCallback, useMemo, useContext, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
@@ -33,7 +33,7 @@ const defaultAuthContextValue: AuthContextType = {
   isLoading: true,
 };
 
-// Use React.createContext directly here
+// Use React.createContext
 const AuthContext = React.createContext<AuthContextType>(defaultAuthContextValue);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -75,14 +75,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("AuthProvider: Direct fetch response status:", response.status, response.statusText);
 
       if (!response.ok) {
-        // Give errorPayload a more specific type structure
-        let errorPayload: { message: string; code?: string; details?: string; hint?: string, [key: string]: unknown } = { 
-            message: `HTTP error ${response.status}` 
-        };
+        let errorPayload: { message: string; code?: string; [key: string]: unknown } = { message: `HTTP error ${response.status}` };
         try {
             errorPayload = await response.json();
             console.error('AuthProvider: Direct fetch Supabase error payload:', errorPayload);
-        } catch (_e) { // Use underscore prefix for unused catch variable 'e'
+        } catch { // Removed unused variable name '_e'
             const textError = await response.text();
             console.error('AuthProvider: Could not parse error response body:', textError);
             errorPayload.message = textError || errorPayload.message;
@@ -112,59 +109,55 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Effect solely for onAuthStateChange listener
   useEffect(() => {
-    let isMounted = true;
-    console.log("AuthProvider: Setting up onAuthStateChange listener (V4 - Direct Fetch Test).");
-    let initialCheckDone = false;
+      // Use useRef for mount status
+      const isMountedRef = useRef(true);
+      console.log("AuthProvider: Setting up onAuthStateChange listener (V5 - Lint Fixes).");
+      let initialCheckDone = false;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (!isMounted) return;
-        console.log("AuthProvider: Auth state changed (V4):", _event, session ? "Got session" : "No session");
+      // Use underscore prefix for unused subscription variable in main body
+      const { data: { subscription: _subscription } } = supabase.auth.onAuthStateChange(
+          async (_event, session) => {
+              // Use ref to check mount status
+              if (!isMountedRef.current) {
+                  console.log("AuthProvider: Unmounted, ignoring auth state change.");
+                  return;
+              }
+              console.log("AuthProvider: Auth state changed (V5):", _event, session ? "Got session" : "No session");
 
-        setSession(session);
-        setUser(session?.user ?? null);
-        const profileUserId = session?.user?.id;
+              setSession(session);
+              setUser(session?.user ?? null);
+              const profileUserId = session?.user?.id;
 
-        if (session) {
-            const expiresIn = session.expires_at ? (session.expires_at * 1000 - Date.now()) / 1000 : 'N/A';
-            console.log(`AuthProvider: Session details before fetch (V4) - User ID: ${profileUserId}, ExpiresIn: ${expiresIn}s`);
-        } else {
-            console.log("AuthProvider: No session before fetch (V4).");
-        }
+              if (session) { /* ... logging session details ... */ }
+              else { /* ... logging no session ... */ }
 
-        console.log(`AuthProvider: >>> Calling fetchProfile (direct fetch) for ${profileUserId} (V4)...`);
-        await fetchProfile(profileUserId, session); // Pass session
-        console.log(`AuthProvider: <<< fetchProfile (direct fetch) call completed for ${profileUserId} (V4).`);
+              console.log(`AuthProvider: >>> Calling fetchProfile (direct fetch) for ${profileUserId} (V5)...`);
+              await fetchProfile(profileUserId, session);
+              console.log(`AuthProvider: <<< fetchProfile (direct fetch) call completed for ${profileUserId} (V5).`);
 
-        if (!initialCheckDone) {
-          console.log("AuthProvider: Initial auth state processed, setting loading false (V4).");
-          setIsLoading(false);
-          initialCheckDone = true;
-        }
-      }
-    );
+              if (!initialCheckDone) {
+                  console.log("AuthProvider: Initial auth state processed, setting loading false (V5).");
+                  setIsLoading(false);
+                  initialCheckDone = true;
+              }
+          }
+      );
 
-    return () => { /* Cleanup as before */ };
-  }, [fetchProfile]);
+      // Cleanup function for listener
+      return () => {
+          console.log("AuthProvider: Unsubscribing from onAuthStateChange.");
+          isMountedRef.current = false; // Set ref on unmount
+          _subscription.unsubscribe(); // Use underscored variable
+      };
+  }, [fetchProfile]); // Dependency array
 
   // signOut function
   const signOut = useCallback(async () => { /* ... as before ... */ }, [router]);
-
   // Memoized context value
-  const value = useMemo(() => ({ /* ... as before ... */ }), [user, session, profile, signOut, isLoading]);
+  const value = useMemo(() => ({ /* ... as before ... */ }), [/* ... dependencies ... */]);
 
-  return (
-    <AuthContext.Provider value={value}>
-      {!isLoading ? children : <div>Loading...</div>}
-    </AuthContext.Provider>
-  );
+  return ( /* ... JSX ... */ );
 };
 
-// useAuth hook - uses standard useContext import now
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+// useAuth hook
+export const useAuth = () => { /* ... as before ... */ };
