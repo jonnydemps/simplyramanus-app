@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react'; // Removed useRef
+import { useEffect, useState } from 'react'; // Add useState
 import { useAuth } from '@/components/auth/AuthProvider'; // Adjust path if needed
 import { usePathname, useRouter } // Use Next.js router
     from 'next/navigation';
@@ -13,8 +13,7 @@ export default function AuthRedirector({ children }: { children: React.ReactNode
   const { user, profile, isLoading } = useAuth();
   const router = useRouter(); // Use the router
   const pathname = usePathname();
-  // Removed redirectingRef - let router handle potential duplicate calls if needed
-  // const redirectingRef = useRef(false);
+  const [redirectInitiated, setRedirectInitiated] = useState(false); // State to track redirect attempt
 
   useEffect(() => {
     // Log dependencies on every run
@@ -71,17 +70,19 @@ export default function AuthRedirector({ children }: { children: React.ReactNode
       }
     }
 
-    // Perform redirect if needed
-    if (targetPath && targetPath !== pathname) {
-       // redirectingRef.current = true; // Removed ref logic
-       console.log(`AuthRedirector: >>> Attempting router.replace('${targetPath}')... Current path: ${pathname}`);
+    // Perform redirect only ONCE if needed
+    if (targetPath && targetPath !== pathname && !redirectInitiated) {
+       setRedirectInitiated(true); // Mark redirect as initiated
+       console.log(`AuthRedirector: >>> Attempting router.replace('${targetPath}') ONCE... Current path: ${pathname}`);
        router.replace(targetPath); // Use router.replace for client-side navigation
-    } else if (targetPath) {
+    } else if (targetPath && targetPath === pathname) {
        console.log(`AuthRedirector: Already on target path '${pathname}'.`);
-       // Removed ref logic
+       if (redirectInitiated) setRedirectInitiated(false); // Reset if we landed on target
+    } else if (targetPath && redirectInitiated) {
+        console.log(`AuthRedirector: Redirect to '${targetPath}' already initiated, waiting...`);
     } else {
        console.log(`AuthRedirector: No redirect target path determined.`);
-       // redirectingRef.current = false; // Removed ref logic
+       if (redirectInitiated) setRedirectInitiated(false); // Reset if no target
     }
 
   // Dependencies: Re-run when loading finishes, user changes, profile changes, or path changes
