@@ -1,23 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-// No longer need useRouter if using Link component only
+// No useRouter needed if using <a> tag for navigation
 import { supabase } from '@/lib/supabase';
-import Link from 'next/link'; // Use Link for navigation
+import Link from 'next/link'; // Keep Link for "Forgot Password?" and "Sign up" links
 
 export default function SignInForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  // New state: Track login success and where to redirect
+  // New state for success and target path
   const [loginSuccess, setLoginSuccess] = useState(false);
-  const [redirectPath, setRedirectPath] = useState('/dashboard'); // Default for non-admin
+  const [redirectPath, setRedirectPath] = useState('/dashboard'); // Default target
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setLoginSuccess(false); // Reset on new attempt
+    setLoginSuccess(false);
     setLoading(true);
 
     try {
@@ -32,23 +32,20 @@ export default function SignInForm() {
 
       if (data?.user) {
         console.log("SignInForm: Sign in API successful for user:", data.user.id);
-        // Fetch admin status to determine the correct redirect path
         const { data: profileData, error: profileError } = await supabase
           .from('profiles').select('is_admin').eq('id', data.user.id).single();
 
         if (profileError) {
-          console.error("SignInForm: Error fetching admin status (defaulting to /dashboard):", profileError.message);
-          setRedirectPath('/dashboard'); // Default target on error
+            console.error("SignInForm: Error fetching admin status (defaulting to /dashboard):", profileError.message);
+            setRedirectPath('/dashboard');
         } else if (profileData?.is_admin) {
-          console.log("SignInForm: User is admin.");
-          setRedirectPath('/admin'); // Set target for admin
+            console.log("SignInForm: User is admin.");
+            setRedirectPath('/admin');
         } else {
-          console.log("SignInForm: User is not admin.");
-          setRedirectPath('/dashboard'); // Set target for non-admin
+            console.log("SignInForm: User is not admin.");
+            setRedirectPath('/dashboard');
         }
-
-        // Set success flag to change the UI
-        setLoginSuccess(true);
+        setLoginSuccess(true); // Set success flag AFTER determining path
 
       } else {
          console.error("SignInForm: Sign in succeeded but no user data found.");
@@ -61,8 +58,7 @@ export default function SignInForm() {
          console.error("SignInForm: Sign in catch block:", err);
          setError(message);
     } finally {
-      // Always finish loading indicator after attempt completes
-      setLoading(false);
+       setLoading(false); // Always stop loading indicator
     }
   };
 
@@ -71,7 +67,6 @@ export default function SignInForm() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
 
-        {/* Conditionally show form OR success message */}
         {!loginSuccess ? (
           // --- Sign In Form ---
           <>
@@ -99,12 +94,8 @@ export default function SignInForm() {
 
               {/* Links */}
               <div className="flex items-center justify-between">
-                <div className="text-sm">
-                  <Link href="/reset-password" className="font-medium text-blue-600 hover:text-blue-500">Forgot your password?</Link>
-                </div>
-                <div className="text-sm">
-                  <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">Don&apos;t have an account? Sign up</Link>
-                </div>
+                <div className="text-sm"><Link href="/reset-password" className="font-medium text-blue-600 hover:text-blue-500">Forgot your password?</Link></div>
+                <div className="text-sm"><Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">Don&apos;t have an account? Sign up</Link></div>
               </div>
 
               {/* Submit Button */}
@@ -116,21 +107,22 @@ export default function SignInForm() {
             </form>
           </>
         ) : (
-          // --- Success Message and Link ---
+          // --- Success Message and <a> Link ---
           <div>
             <h2 className="mt-6 text-center text-2xl font-bold text-green-700">
               Sign In Successful!
             </h2>
             <p className="mt-2 text-center text-sm text-gray-600">
-              Click the button below to proceed.
+              Click the link below to proceed.
             </p>
             <div className="mt-6">
-               <Link
-                  href={redirectPath} // Use the determined path (/admin or /dashboard)
-                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+               {/* Using <a> tag instead of <Link> for testing */}
+               <a
+                  href={redirectPath}
+                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" // Use same styles
                >
                    {redirectPath === '/admin' ? 'Go to Admin Dashboard' : 'Go to Dashboard'}
-               </Link>
+               </a>
             </div>
           </div>
         )}
