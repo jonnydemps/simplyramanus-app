@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link'; // Keep Link for other links
 
@@ -11,6 +12,7 @@ export default function SignInForm() {
   const [loading, setLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [redirectPath, setRedirectPath] = useState('/dashboard');
+  const router = useRouter();
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +62,18 @@ export default function SignInForm() {
     }
   };
 
+  // Effect to automatically redirect after successful login
+  useEffect(() => {
+    if (loginSuccess) {
+      const timer = setTimeout(() => {
+        console.log(`SignInForm: Auto-redirecting to ${redirectPath} after login success`);
+        router.push(redirectPath);
+      }, 1500); // Short delay for user to see success message
+      
+      return () => clearTimeout(timer);
+    }
+  }, [loginSuccess, redirectPath, router]);
+
   // --- JSX ---
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -98,25 +112,24 @@ export default function SignInForm() {
             </form>
           </>
         ) : (
-          // --- Success Message and <a> Link ---
+          // --- Success Message with automatic redirect ---
           <div>
             <h2 className="mt-6 text-center text-2xl font-bold text-green-700">
               Sign In Successful!
             </h2>
             <p className="mt-2 text-center text-sm text-gray-600">
-              Click the link below to proceed.
+              Redirecting you to {redirectPath === '/admin' ? 'Admin Dashboard' : 'Dashboard'}...
             </p>
             <div className="mt-6">
-               <a
-                  href={redirectPath}
-                  // Removed unused 'e' argument here:
-                  onClick={() => {
-                    console.log(`SignInForm: Proceed link clicked! Attempting navigation via <a> tag to: ${redirectPath}`);
-                  }}
-                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-               >
-                   {redirectPath === '/admin' ? 'Go to Admin Dashboard' : 'Go to Dashboard'}
-               </a>
+              <button
+                onClick={() => {
+                  console.log(`SignInForm: Manual redirect button clicked. Navigating to: ${redirectPath}`);
+                  router.push(redirectPath);
+                }}
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                {redirectPath === '/admin' ? 'Go to Admin Dashboard' : 'Go to Dashboard'}
+              </button>
             </div>
           </div>
         )}
