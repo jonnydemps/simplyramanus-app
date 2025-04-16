@@ -49,32 +49,40 @@ export async function middleware(req: NextRequest) {
 
   // --- Handle Logged-In Users ---
   if (user) {
+    // Fetch profile once for logged-in user checks
+    console.log(`Middleware: Logged-in user ${user.id}. Fetching profile...`);
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    const isAdmin = profile && profile.is_admin;
+    console.log(`Middleware: User ${user.id} profile fetched. isAdmin=${isAdmin}. Error: ${profileError?.message ?? 'None'}`);
+
     // --- Redirect Logged-In Users from Public Auth Paths ---
     // (Except root '/')
     if (isPublicPath && pathname !== '/') {
-        console.log(`Middleware: Logged-in user on public auth path ${pathname}, redirecting to /dashboard`);
-        const url = req.nextUrl.clone();
-        url.pathname = '/dashboard'; // Redirect to dashboard by default
-        return NextResponse.redirect(url);
+      const targetPath = isAdmin ? '/admin' : '/dashboard';
+      console.log(`Middleware: Logged-in user (isAdmin=${isAdmin}) on public auth path ${pathname}. Redirecting to ${targetPath}`);
+      const url = req.nextUrl.clone();
+      url.pathname = targetPath;
+      return NextResponse.redirect(url);
     }
 
     // --- Protect Admin Routes ---
     if (isAdminPath) {
-      console.log(`Middleware: User accessing admin path ${pathname}. Checking admin status...`);
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', user.id)
-        .single();
-
-      if (error || !profile || !profile.is_admin) {
-        console.error(`Middleware: Admin access denied for user ${user.id} to path ${pathname}. Error: ${error?.message ?? 'Profile not found or not admin'}`);
+      console.log(`Middleware: User accessing admin path ${pathname}. isAdmin=${isAdmin}`);
+      if (!isAdmin) {
+        // Profile fetch error already logged above if applicable
+        console.error(`Middleware: Admin access denied for user ${user.id} to path ${pathname}. Redirecting to /dashboard.`);
         const url = req.nextUrl.clone();
         url.pathname = '/dashboard'; // Or a specific 'unauthorized' page
         return NextResponse.redirect(url);
       }
       console.log(`Middleware: Admin access granted for user ${user.id} to path ${pathname}.`);
     }
+    // Allow access to other non-public, non-admin paths for logged-in users (e.g., /dashboard)
   }
 
   // Allow request to proceed if no redirects were triggered
