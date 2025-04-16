@@ -74,11 +74,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const url = `${supabaseUrl}/rest/v1/profiles?id=eq.${userId}&select=${selectColumns}`;
 
       try {
-          console.log("AuthProvider: Making direct fetch to Supabase profiles...");
+          console.log(`AuthProvider: Making direct fetch to Supabase profiles URL: ${url}`);
           const response = await fetch(url, { headers: headers });
-          console.log("AuthProvider: Direct fetch response status:", response.status, response.statusText);
+          console.log(`AuthProvider: Direct fetch response status: ${response.status} ${response.statusText}`);
+          console.log("AuthProvider: Direct fetch response headers:", Object.fromEntries(response.headers.entries())); // Log headers
 
           if (!response.ok) {
+              console.error(`AuthProvider: Direct fetch failed with status ${response.status}. Attempting to read error body...`);
               let errorPayload: { message: string; code?: string; [key: string]: unknown } = { message: `HTTP error ${response.status}` };
               try {
                   errorPayload = await response.json();
@@ -94,20 +96,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               } else {
                  console.error('AuthProvider: Error fetching profile (direct fetch):', errorPayload);
               }
-              setProfile(null);
+              setProfile(null); // Clear profile on error
+              console.log("AuthProvider: Set profile to null due to fetch error."); // Log state change
           } else {
-               if (response.status === 204 || response.headers.get('content-length') === '0') {
-                    console.warn(`AuthProvider: Profile not found (direct fetch, empty 2xx response) for user ${userId}.`);
+               const responseBody = await response.text(); // Read body as text first
+               console.log("AuthProvider: Direct fetch successful response body (text):", responseBody);
+
+               if (response.status === 204 || responseBody.length === 0) {
+                    console.warn(`AuthProvider: Profile not found (direct fetch, empty 2xx response or empty body) for user ${userId}.`);
                     setProfile(null);
+                    console.log("AuthProvider: Set profile to null due to empty success response."); // Log state change
                } else {
-                    const profileData = await response.json();
-                    console.log("AuthProvider: Profile data fetched (direct fetch):", profileData);
-                    setProfile(profileData as Profile);
+                    try {
+                        const profileData = JSON.parse(responseBody); // Parse text body
+                        console.log("AuthProvider: Profile data fetched and parsed (direct fetch):", profileData);
+                        setProfile(profileData as Profile);
+                        console.log("AuthProvider: Set profile state with fetched data:", profileData); // Log state change
+                    } catch (parseError) {
+                        console.error("AuthProvider: Error parsing profile JSON response:", parseError, "Body was:", responseBody);
+                        setProfile(null);
+                        console.log("AuthProvider: Set profile to null due to JSON parse error."); // Log state change
+                    }
                }
           }
       } catch (catchError) {
-          console.error("AuthProvider: Caught exception fetching profile (direct fetch):", catchError);
+          console.error("AuthProvider: Caught exception during fetchProfile (direct fetch):", catchError);
           setProfile(null);
+          console.log("AuthProvider: Set profile to null due to caught exception."); // Log state change
       }
   }, []); // End useCallback
 
