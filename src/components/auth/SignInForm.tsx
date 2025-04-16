@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-// No useRouter needed for this version
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link'; // Keep Link for other links
 
@@ -108,13 +107,11 @@ export default function SignInForm() {
               Click the link below to proceed.
             </p>
             <div className="mt-6">
-               {/* Using <a> tag with onClick logger */}
                <a
                   href={redirectPath}
-                  onClick={(e) => {
-                    // Log that the click happened BEFORE the browser navigates
+                  // Removed unused 'e' argument here:
+                  onClick={() => {
                     console.log(`SignInForm: Proceed link clicked! Attempting navigation via <a> tag to: ${redirectPath}`);
-                    // We DO NOT call e.preventDefault() here, so browser should navigate normally
                   }}
                   className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                >
