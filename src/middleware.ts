@@ -37,9 +37,9 @@ export async function middleware(req: NextRequest) {
       pathname === '/favicon.ico' ||
       pathname.startsWith('/api/webhooks/');
 
-  // --- ONLY Protect Non-Public Paths for Logged-Out Users ---
-  // If the user is NOT logged in AND they are trying to access a path
-  // that IS NOT public, redirect them to signin.
+  const isAdminPath = pathname.startsWith('/admin');
+
+  // --- Redirect Logged-Out Users from Protected Paths ---
   if (!user && !isPublicPath) {
     console.log(`Middleware: No user, accessing protected path ${pathname}, redirecting to /signin`);
     const url = req.nextUrl.clone();
@@ -47,12 +47,38 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // --- REMOVED ALL OTHER REDIRECT LOGIC ---
-  // Allow ALL other requests through. The client-side AuthRedirector
-  // component will handle redirecting logged-in users away from /signin
-  // or non-admins away from /admin based on the loaded AuthProvider state.
+  // --- Handle Logged-In Users ---
+  if (user) {
+    // --- Redirect Logged-In Users from Public Auth Paths ---
+    // (Except root '/')
+    if (isPublicPath && pathname !== '/') {
+        console.log(`Middleware: Logged-in user on public auth path ${pathname}, redirecting to /dashboard`);
+        const url = req.nextUrl.clone();
+        url.pathname = '/dashboard'; // Redirect to dashboard by default
+        return NextResponse.redirect(url);
+    }
 
-  return response; // Return the response (potentially with updated cookies)
+    // --- Protect Admin Routes ---
+    if (isAdminPath) {
+      console.log(`Middleware: User accessing admin path ${pathname}. Checking admin status...`);
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+
+      if (error || !profile || !profile.is_admin) {
+        console.error(`Middleware: Admin access denied for user ${user.id} to path ${pathname}. Error: ${error?.message ?? 'Profile not found or not admin'}`);
+        const url = req.nextUrl.clone();
+        url.pathname = '/dashboard'; // Or a specific 'unauthorized' page
+        return NextResponse.redirect(url);
+      }
+      console.log(`Middleware: Admin access granted for user ${user.id} to path ${pathname}.`);
+    }
+  }
+
+  // Allow request to proceed if no redirects were triggered
+  return response;
 }
 
 // Matcher config
