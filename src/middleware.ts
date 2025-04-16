@@ -60,10 +60,18 @@ export async function middleware(req: NextRequest) {
     const isAdmin = profile && profile.is_admin;
     console.log(`Middleware: User ${user.id} profile fetched. isAdmin=${isAdmin}. Error: ${profileError?.message ?? 'None'}`);
 
-    // --- Redirect Logged-In Users from Public Auth Paths ---
-    // (Except root '/')
-    if (isPublicPath && pathname !== '/') {
-      const targetPath = isAdmin ? '/admin' : '/dashboard';
+    // --- Redirect Logged-In Users from Root Path ---
+    if (pathname === '/') {
+        const targetPath = isAdmin ? '/admin' : '/dashboard';
+        console.log(`Middleware: Logged-in user (isAdmin=${isAdmin}) on root path '/'. Redirecting to ${targetPath}`);
+        const url = req.nextUrl.clone();
+        url.pathname = targetPath;
+        return NextResponse.redirect(url);
+    }
+
+    // --- Redirect Logged-In Users from Other Public Auth Paths ---
+    if (isPublicPath /* pathname !== '/' is implied by the check above */) {
+      const targetPath = isAdmin ? '/admin' : '/dashboard'; // Admins hitting /signin etc. should also go to /admin
       console.log(`Middleware: Logged-in user (isAdmin=${isAdmin}) on public auth path ${pathname}. Redirecting to ${targetPath}`);
       const url = req.nextUrl.clone();
       url.pathname = targetPath;
