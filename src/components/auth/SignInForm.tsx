@@ -35,21 +35,26 @@ export default function SignInForm() {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles').select('is_admin').eq('id', data.user.id).single();
 
+        let isAdmin = false; // Default to non-admin
         if (profileError) {
             console.error("SignInForm: Error fetching admin status:", profileError.message);
-            // Removed setRedirectPath call
+            // Keep isAdmin as false, redirect to dashboard
         } else if (profileData?.is_admin) {
             console.log("SignInForm: User is admin.");
-            // Removed setRedirectPath call
+            isAdmin = true;
         } else {
             console.log("SignInForm: User is not admin.");
-            // Removed setRedirectPath call
+            // Keep isAdmin as false
         }
+
+        // Determine target path based on admin status
+        const targetPath = isAdmin ? '/admin' : '/dashboard';
+
         // Set success state first
         setLoginSuccess(true);
-        // Trigger navigation to force middleware check
-        console.log("SignInForm: Login success, navigating to '/' to trigger middleware redirect...");
-        router.push('/'); // Navigate to root, middleware will handle the rest
+        // Navigate directly to the correct destination
+        console.log(`SignInForm: Login success (isAdmin=${isAdmin}), navigating directly to ${targetPath}...`);
+        router.push(targetPath);
 
       } else {
          console.error("SignInForm: Sign in succeeded but no user data found.");
