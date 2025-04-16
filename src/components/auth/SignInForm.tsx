@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react'; // Removed useEffect
+// Removed useRouter import
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link'; // Keep Link for other links
 
@@ -11,8 +11,8 @@ export default function SignInForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
-  const [redirectPath, setRedirectPath] = useState('/dashboard');
-  const router = useRouter();
+  // const [redirectPath, setRedirectPath] = useState('/dashboard'); // No longer needed here
+  // Removed router variable
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,15 +36,16 @@ export default function SignInForm() {
           .from('profiles').select('is_admin').eq('id', data.user.id).single();
 
         if (profileError) {
-            console.error("SignInForm: Error fetching admin status (defaulting to /dashboard):", profileError.message);
-            setRedirectPath('/dashboard');
+            console.error("SignInForm: Error fetching admin status:", profileError.message);
+            // Removed setRedirectPath call
         } else if (profileData?.is_admin) {
             console.log("SignInForm: User is admin.");
-            setRedirectPath('/admin');
+            // Removed setRedirectPath call
         } else {
             console.log("SignInForm: User is not admin.");
-            setRedirectPath('/dashboard');
+            // Removed setRedirectPath call
         }
+        // AuthRedirector will handle the redirect based on AuthProvider state
         setLoginSuccess(true);
 
       } else {
@@ -62,17 +63,8 @@ export default function SignInForm() {
     }
   };
 
-  // Effect to automatically redirect after successful login
-  useEffect(() => {
-    if (loginSuccess) {
-      const timer = setTimeout(() => {
-        console.log(`SignInForm: Auto-redirecting to ${redirectPath} after login success`);
-        router.push(redirectPath);
-      }, 1500); // Short delay for user to see success message
-      
-      return () => clearTimeout(timer);
-    }
-  }, [loginSuccess, redirectPath, router]);
+  // --- REMOVED: Effect for automatic redirect ---
+  // AuthRedirector now handles redirects away from signin page
 
   // --- JSX ---
   return (
@@ -118,19 +110,11 @@ export default function SignInForm() {
               Sign In Successful!
             </h2>
             <p className="mt-2 text-center text-sm text-gray-600">
-              Redirecting you to {redirectPath === '/admin' ? 'Admin Dashboard' : 'Dashboard'}...
+              You will be redirected shortly.
+              {/* Removed dynamic path display */}
             </p>
-            <div className="mt-6">
-              <button
-                onClick={() => {
-                  console.log(`SignInForm: Manual redirect button clicked. Navigating to: ${redirectPath}`);
-                  router.push(redirectPath);
-                }}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                {redirectPath === '/admin' ? 'Go to Admin Dashboard' : 'Go to Dashboard'}
-              </button>
-            </div>
+            {/* --- REMOVED: Manual redirect button --- */}
+            {/* AuthRedirector handles the redirect automatically */}
           </div>
         )}
 
