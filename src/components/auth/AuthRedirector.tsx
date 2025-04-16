@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef } from 'react'; // Added useRef
+import { useEffect } from 'react'; // Removed useRef
 import { useAuth } from '@/components/auth/AuthProvider'; // Adjust path if needed
 import { usePathname, useRouter } // Use Next.js router
     from 'next/navigation';
@@ -13,8 +13,8 @@ export default function AuthRedirector({ children }: { children: React.ReactNode
   const { user, profile, isLoading } = useAuth();
   const router = useRouter(); // Use the router
   const pathname = usePathname();
-  // Ref to prevent multiple redirects in quick succession if needed
-  const redirectingRef = useRef(false);
+  // Removed redirectingRef - let router handle potential duplicate calls if needed
+  // const redirectingRef = useRef(false);
 
   useEffect(() => {
     // Log dependencies on every run
@@ -23,7 +23,7 @@ export default function AuthRedirector({ children }: { children: React.ReactNode
     // --- WAIT until loading is definitively false ---
     if (isLoading) {
       console.log("AuthRedirector: Still loading auth state...");
-      redirectingRef.current = false; // Reset redirect flag while loading
+      // redirectingRef.current = false; // Removed
       return;
     }
 
@@ -35,8 +35,8 @@ export default function AuthRedirector({ children }: { children: React.ReactNode
         // OR if profile fetch failed. The console logs from AuthProvider will show why.
         console.log("AuthRedirector: User exists but profile state is null, waiting/skipping redirect logic.");
         // We might get stuck here if profile fetch consistently fails - check AuthProvider logs
-        redirectingRef.current = false; // Reset redirect flag
-        return; 
+        // redirectingRef.current = false; // Removed this leftover line
+        return;
     }
     
     // --- Now we know: isLoading is false, and if user exists, profile state is set (either object or null after fetch) ---
@@ -71,17 +71,17 @@ export default function AuthRedirector({ children }: { children: React.ReactNode
       }
     }
 
-    // Perform redirect only ONCE if needed and not already redirecting
-    if (targetPath && targetPath !== pathname && !redirectingRef.current) {
-       redirectingRef.current = true; // Set flag to prevent immediate re-trigger
+    // Perform redirect if needed
+    if (targetPath && targetPath !== pathname) {
+       // redirectingRef.current = true; // Removed ref logic
        console.log(`AuthRedirector: >>> Attempting router.replace('${targetPath}')... Current path: ${pathname}`);
        router.replace(targetPath); // Use router.replace for client-side navigation
     } else if (targetPath) {
-       console.log(`AuthRedirector: Already on target path '${pathname}' or redirect already in progress.`);
-       // Don't reset redirectingRef here if redirect is in progress, let the next effect run handle it
+       console.log(`AuthRedirector: Already on target path '${pathname}'.`);
+       // Removed ref logic
     } else {
        console.log(`AuthRedirector: No redirect target path determined.`);
-       redirectingRef.current = false; // Reset if no redirect needed
+       // redirectingRef.current = false; // Removed ref logic
     }
 
   // Dependencies: Re-run when loading finishes, user changes, profile changes, or path changes
