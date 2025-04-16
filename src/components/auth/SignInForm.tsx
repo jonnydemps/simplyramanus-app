@@ -1,18 +1,18 @@
 'use client';
 
 import { useState } from 'react'; // Removed useEffect
-// Removed useRouter import
+import { useRouter } from 'next/navigation'; // Re-added useRouter
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link'; // Keep Link for other links
 
 export default function SignInForm() {
+  const router = useRouter(); // Get router instance
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
   // const [redirectPath, setRedirectPath] = useState('/dashboard'); // No longer needed here
-  // Removed router variable
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,8 +45,11 @@ export default function SignInForm() {
             console.log("SignInForm: User is not admin.");
             // Removed setRedirectPath call
         }
-        // AuthRedirector will handle the redirect based on AuthProvider state
+        // Set success state first
         setLoginSuccess(true);
+        // Trigger navigation to force middleware check
+        console.log("SignInForm: Login success, navigating to '/' to trigger middleware redirect...");
+        router.push('/'); // Navigate to root, middleware will handle the rest
 
       } else {
          console.error("SignInForm: Sign in succeeded but no user data found.");
