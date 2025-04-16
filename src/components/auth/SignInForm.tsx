@@ -1,18 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-// No useRouter needed if using <a> tag for navigation
+// No useRouter needed for this version
 import { supabase } from '@/lib/supabase';
-import Link from 'next/link'; // Keep Link for "Forgot Password?" and "Sign up" links
+import Link from 'next/link'; // Keep Link for other links
 
 export default function SignInForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  // New state for success and target path
   const [loginSuccess, setLoginSuccess] = useState(false);
-  const [redirectPath, setRedirectPath] = useState('/dashboard'); // Default target
+  const [redirectPath, setRedirectPath] = useState('/dashboard');
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +44,7 @@ export default function SignInForm() {
             console.log("SignInForm: User is not admin.");
             setRedirectPath('/dashboard');
         }
-        setLoginSuccess(true); // Set success flag AFTER determining path
+        setLoginSuccess(true);
 
       } else {
          console.error("SignInForm: Sign in succeeded but no user data found.");
@@ -58,7 +57,7 @@ export default function SignInForm() {
          console.error("SignInForm: Sign in catch block:", err);
          setError(message);
     } finally {
-       setLoading(false); // Always stop loading indicator
+       setLoading(false);
     }
   };
 
@@ -76,18 +75,11 @@ export default function SignInForm() {
               </h2>
             </div>
             <form className="mt-8 space-y-6" onSubmit={handleSignIn}>
-              {/* Email Input */}
-              <div className="rounded-md shadow-sm -space-y-px">
-                <div>
-                  <label htmlFor="email-address" className="sr-only">Email address</label>
-                  <input id="email-address" name="email" type="email" autoComplete="email" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
-                </div>
-                {/* Password Input */}
-                <div>
-                  <label htmlFor="password" className="sr-only">Password</label>
-                  <input id="password" name="password" type="password" autoComplete="current-password" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                </div>
-              </div>
+               {/* Email Input */}
+               <div className="rounded-md shadow-sm -space-y-px">
+                 <div><label htmlFor="email-address" className="sr-only">Email address</label><input id="email-address" name="email" type="email" autoComplete="email" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+                 <div><label htmlFor="password" className="sr-only">Password</label><input id="password" name="password" type="password" autoComplete="current-password" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+               </div>
 
               {/* Error Display */}
               {error && (<div className="text-red-500 text-sm mt-2">{error}</div>)}
@@ -116,10 +108,15 @@ export default function SignInForm() {
               Click the link below to proceed.
             </p>
             <div className="mt-6">
-               {/* Using <a> tag instead of <Link> for testing */}
+               {/* Using <a> tag with onClick logger */}
                <a
                   href={redirectPath}
-                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" // Use same styles
+                  onClick={(e) => {
+                    // Log that the click happened BEFORE the browser navigates
+                    console.log(`SignInForm: Proceed link clicked! Attempting navigation via <a> tag to: ${redirectPath}`);
+                    // We DO NOT call e.preventDefault() here, so browser should navigate normally
+                  }}
+                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                >
                    {redirectPath === '/admin' ? 'Go to Admin Dashboard' : 'Go to Dashboard'}
                </a>
