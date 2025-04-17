@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase'; // Use new client creator
+import { createClient } from '@/lib/supabase/client'; // Corrected import path
 import { Database } from '@/lib/database.types';
 // import Link from 'next/link'; // REMOVED - Not used in simplified version
 

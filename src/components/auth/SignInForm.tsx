@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase'; // Use new client creator
+import { createClient } from '@/lib/supabase/client'; // Corrected import path
 import Link from 'next/link';
 
 export default function SignInForm() {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { createClient } from '@/lib/supabase'; // Use the new client creator function
+import { createClient } from '@/lib/supabase/client'; // Corrected import path
 import { Session, User, AuthChangeEvent, SupabaseClient } from '@supabase/supabase-js'; // Import necessary types
 
 // Profile type - Keep this defined
@@ -26,11 +26,7 @@ type AuthContextType = {
 };
 
 // Default Context Value - Needs to be defined BEFORE AuthContext
-// We provide a placeholder client here; the real one comes from the provider value
 const defaultAuthContextValue: AuthContextType = {
-  // Provide a default SupabaseClient instance or handle null appropriately
-  // For simplicity, we might throw an error in useAuth if context is default
-  // Or provide a dummy client initially. Let's assume useAuth handles undefined.
   // @ts-ignore // Ignore TS error for providing incomplete default temporarily
   supabase: {} as SupabaseClient, // Placeholder
   user: null,
