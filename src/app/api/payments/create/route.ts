@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerActionClient } from '@/lib/supabase'; // Use server action client
+import { createServerActionClient } from '@/lib/supabase/server'; // Corrected import path
 // Removed static import: import { createPaymentIntent } from '@/lib/stripe';
 
 export async function POST(request: NextRequest) {
