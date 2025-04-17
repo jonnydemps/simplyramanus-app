@@ -81,7 +81,8 @@ export default function FormulationDetails({ params }: PageProps) {
     };
 
     fetchFormulationDetails();
-  }, [formulationId]);
+  // Add supabase to dependency array as it's used inside the effect
+  }, [formulationId, supabase]);
 
   // REMOVED unused getStatusBadgeClass function
   // const getStatusBadgeClass = (status: string) => { ... };

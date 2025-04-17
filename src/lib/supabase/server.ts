@@ -17,7 +17,8 @@ export function createServerActionClient() {
         set(name: string, value: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value, ...options })
-          } catch (error) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          } catch (_error) { // Prefixed unused variable
             // The `set` method was called from a Server Component.
             // This can be ignored if you have middleware refreshing sessions.
             console.warn(`ServerActionClient: Failed to set cookie '${name}' from Server Component/Action.`);
@@ -26,7 +27,8 @@ export function createServerActionClient() {
         remove(name: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value: '', ...options })
-          } catch (error) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          } catch (_error) { // Prefixed unused variable
             // The `delete` method was called from a Server Component.
             // This can be ignored if you have middleware refreshing sessions.
             console.warn(`ServerActionClient: Failed to delete cookie '${name}' from Server Component/Action.`);

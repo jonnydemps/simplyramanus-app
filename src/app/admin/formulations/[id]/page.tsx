@@ -105,7 +105,8 @@ export default function FormulationReview({ params }: FormulationReviewProps) {
     };
 
     fetchFormulationDetails();
-  }, [formulationId]); // Depend only on formulationId
+  // Add supabase to dependency array as it's used inside the effect
+  }, [formulationId, supabase]);
 
   // handleStatusChange function - check formulation exists before setting
   const handleStatusChange = async (newStatus: string) => {

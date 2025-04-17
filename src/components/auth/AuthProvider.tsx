@@ -27,7 +27,7 @@ type AuthContextType = {
 
 // Default Context Value - Needs to be defined BEFORE AuthContext
 const defaultAuthContextValue: AuthContextType = {
-  // @ts-ignore // Ignore TS error for providing incomplete default temporarily
+  // No longer expect an error here as placeholder is typed
   supabase: {} as SupabaseClient, // Placeholder
   user: null,
   session: null,
