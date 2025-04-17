@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client'; // Corrected import path
 import Link from 'next/link';
 
 export default function ResetPasswordForm() {
+  const supabase = createClient(); // Create client instance
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
