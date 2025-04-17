@@ -223,12 +223,12 @@ export default function FormulationReview({ params }: FormulationReviewProps) {
                  <span className="font-medium text-gray-700">Company:</span> {formulation.profiles?.company_name ?? 'N/A'}
               </div>
               <div>
-                 <span className="font-medium text-gray-700">Submitted:</span> {new Date(formulation.created_at).toLocaleString()}
+                 <span className="font-medium text-gray-700">Submitted:</span> {formulation.created_at ? new Date(formulation.created_at).toLocaleString() : 'N/A'}
               </div>
               <div>
                 <span className="font-medium text-gray-700">Status:</span>{' '}
-                <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeClass(formulation.status)}`}>
-                  {formulation.status.replace('_', ' ')}
+                <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeClass(formulation.status ?? 'unknown')}`}>
+                  {(formulation.status ?? 'Unknown').replace('_', ' ')}
                 </span>
               </div>
               <div>
@@ -266,7 +266,7 @@ export default function FormulationReview({ params }: FormulationReviewProps) {
                     <p className="text-sm text-gray-500 mb-2">Original filename not available.</p>
                 )}
                 <div className="flex items-center justify-between">
-                   <p className="text-sm text-gray-500">Submitted on {new Date(formulation.created_at).toLocaleDateString()}</p>
+                   <p className="text-sm text-gray-500">Submitted on {formulation.created_at ? new Date(formulation.created_at).toLocaleDateString() : 'N/A'}</p>
                    {/* Link to download API route */}
                    {formulation.file_path && ( // Only show download if file_path exists
                      <a
