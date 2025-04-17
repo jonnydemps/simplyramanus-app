@@ -72,21 +72,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               .eq('id', userId)
               .single();
 
+          // --- ADDED Detailed Logging ---
           if (profileError) {
               if (profileError.code === 'PGRST116') {
                   console.warn(`AuthProvider: Profile not found for user ${userId} or RLS denied access.`);
               } else {
                   console.error('AuthProvider: Error fetching profile:', profileError);
               }
-              setProfile(null);
+              console.log("AuthProvider: Setting profile state to null due to fetch error.");
+              setProfile(null); // Clear profile on error
           } else if (profileData) {
+              console.log("AuthProvider: Profile data fetched successfully:", profileData);
+              console.log("AuthProvider: Setting profile state with fetched data.");
               setProfile(profileData as Profile);
           } else {
               console.warn(`AuthProvider: Profile data was null without error for user ${userId}.`);
+              console.log("AuthProvider: Setting profile state to null due to null data without error.");
               setProfile(null);
           }
+          console.log("AuthProvider: fetchProfile try block finished.");
+          // --- END Detailed Logging ---
       } catch (catchError) {
           console.error("AuthProvider: Caught exception during fetchProfile:", catchError);
+          console.log("AuthProvider: Setting profile state to null due to caught exception.");
           setProfile(null);
       }
   }, [supabaseClient]); // Depend on the client instance
@@ -110,13 +118,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               if (session) {
                   // Fetch profile only if session exists and user ID is present
                   if (profileUserId) {
+                      console.log(`AuthProvider: Auth state change triggered fetchProfile for ${profileUserId}.`);
                       await fetchProfile(profileUserId);
                   } else {
-                      // Clear profile if session exists but user ID is missing (shouldn't happen)
+                      console.log("AuthProvider: Auth state change - session exists but no user ID, clearing profile.");
                       setProfile(null);
                   }
               } else {
                   // Clear profile if session is null (logout)
+                  console.log("AuthProvider: Auth state change - no session, clearing profile.");
                   setProfile(null);
               }
 
@@ -137,8 +147,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               setUser(session?.user ?? null);
               const profileUserId = session?.user?.id;
               if (profileUserId) {
+                  console.log(`AuthProvider: Initial getSession triggered fetchProfile for ${profileUserId}.`);
                   fetchProfile(profileUserId);
               } else {
+                  console.log("AuthProvider: Initial getSession - no user ID, clearing profile.");
                   setProfile(null);
               }
               console.log("AuthProvider: Initial auth state processed (from getSession), setting loading false.");
