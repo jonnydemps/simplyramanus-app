@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'; // Import Suspense
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client'; // Corrected import path
 import { Database } from '@/lib/database.types';
 import Link from 'next/link'; // Import Link for error state button
 
@@ -22,6 +22,7 @@ function LoadingFallback() {
 
 // Component containing the main logic using useSearchParams
 function PaymentContent() {
+  const supabase = createClient(); // Create client instance
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formulation, setFormulation] = useState<Formulation | null>(null);
@@ -100,6 +101,8 @@ function PaymentContent() {
     };
 
     fetchFormulationAndCreatePayment();
+  // Add supabase to dependency array if it's used inside fetchFormulationAndCreatePayment (it's used in handlePaymentSuccess which is called later)
+  // For now, only formulationId is the direct dependency for fetching.
   }, [formulationId]); // Rerun effect if formulationId changes
 
   // --- CORRECTED handlePaymentSuccess ---
