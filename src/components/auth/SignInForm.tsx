@@ -74,7 +74,7 @@ export default function SignInForm() {
               {/* Links */}
               <div className="flex items-center justify-between">
                 <div className="text-sm"><Link href="/reset-password" className="font-medium text-blue-600 hover:text-blue-500">Forgot your password?</Link></div>
-                <div className="text-sm"><Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">Don't have an account? Sign up</Link></div>
+                <div className="text-sm"><Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">Do not have an account? Sign up</Link></div> {/* Corrected apostrophe */}
               </div>
 
               {/* Submit Button */}
