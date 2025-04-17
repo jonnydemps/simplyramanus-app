@@ -4,7 +4,7 @@
 import React, { useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
-import { useRouter } from 'next/navigation';
+// import { useRouter, usePathname } from 'next/navigation'; // Removed useRouter, usePathname not needed here
 
 // Profile type
 type Profile = {
@@ -45,84 +45,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
+  // const router = useRouter(); // Removed - not used
 
-  // fetchProfile function (using direct fetch)
-  const fetchProfile = useCallback(async (userId: string | undefined, currentSession: Session | null) => {
-      if (!userId || !currentSession?.access_token) {
-          console.log("AuthProvider (Direct Fetch): fetchProfile called without userId or session/token, clearing profile.");
+  // fetchProfile function (using Supabase client)
+  const fetchProfile = useCallback(async (userId: string | undefined) => {
+      if (!userId) {
+          console.log("AuthProvider (Supabase Client): fetchProfile called without userId, clearing profile.");
           setProfile(null);
           return;
       }
-      console.log(`AuthProvider (Direct Fetch): Fetching profile for user ID: ${userId}`);
-
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-      if (!supabaseUrl || !supabaseAnonKey) {
-          console.error("AuthProvider (Direct Fetch): Supabase URL or Anon Key missing.");
-          setProfile(null);
-          return;
-      }
-
-      const headers: HeadersInit = {
-          'apikey': supabaseAnonKey,
-          'Authorization': `Bearer ${currentSession.access_token}`,
-          'Accept': 'application/vnd.pgrst.object+json'
-      };
-      const selectColumns = 'id,company_name,contact_email,contact_phone,is_admin,created_at,updated_at';
-      const url = `${supabaseUrl}/rest/v1/profiles?id=eq.${userId}&select=${selectColumns}`;
+      console.log(`AuthProvider (Supabase Client): Fetching profile for user ID: ${userId}`);
 
       try {
-          console.log(`AuthProvider: Making direct fetch to Supabase profiles URL: ${url}`);
-          const response = await fetch(url, { headers: headers });
-          console.log(`AuthProvider: Direct fetch response status: ${response.status} ${response.statusText}`);
-          console.log("AuthProvider: Direct fetch response headers:", Object.fromEntries(response.headers.entries())); // Log headers
+          const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('id, company_name, contact_email, contact_phone, is_admin, created_at, updated_at') // Select all needed fields
+              .eq('id', userId)
+              .single(); // Expect a single profile
 
-          if (!response.ok) {
-              console.error(`AuthProvider: Direct fetch failed with status ${response.status}. Attempting to read error body...`);
-              let errorPayload: { message: string; code?: string; [key: string]: unknown } = { message: `HTTP error ${response.status}` };
-              try {
-                  errorPayload = await response.json();
-                  console.error('AuthProvider: Direct fetch Supabase error payload:', errorPayload);
-              } catch { // Removed unused variable name
-                  const textError = await response.text();
-                  console.error('AuthProvider: Could not parse error response body:', textError);
-                  errorPayload.message = textError || errorPayload.message;
-              }
-
-              if (errorPayload.code === 'PGRST116') {
-                 console.warn(`AuthProvider: Profile not found (direct fetch) for user ${userId} or RLS denied access.`);
+          if (profileError) {
+              // Handle specific errors like RLS denial or not found
+              if (profileError.code === 'PGRST116') { // PostgREST code for "Not Found"
+                  console.warn(`AuthProvider (Supabase Client): Profile not found for user ${userId} or RLS denied access.`);
               } else {
-                 console.error('AuthProvider: Error fetching profile (direct fetch):', errorPayload);
+                  console.error('AuthProvider (Supabase Client): Error fetching profile:', profileError);
               }
               setProfile(null); // Clear profile on error
-              console.log("AuthProvider: Set profile to null due to fetch error."); // Log state change
+              console.log("AuthProvider: Set profile to null due to fetch error.");
+          } else if (profileData) {
+              console.log("AuthProvider (Supabase Client): Profile data fetched:", profileData);
+              setProfile(profileData as Profile);
+              console.log("AuthProvider: Set profile state with fetched data:", profileData);
           } else {
-               const responseBody = await response.text(); // Read body as text first
-               console.log("AuthProvider: Direct fetch successful response body (text):", responseBody);
-
-               if (response.status === 204 || responseBody.length === 0) {
-                    console.warn(`AuthProvider: Profile not found (direct fetch, empty 2xx response or empty body) for user ${userId}.`);
-                    setProfile(null);
-                    console.log("AuthProvider: Set profile to null due to empty success response."); // Log state change
-               } else {
-                    try {
-                        const profileData = JSON.parse(responseBody); // Parse text body
-                        console.log("AuthProvider: Profile data fetched and parsed (direct fetch):", profileData);
-                        setProfile(profileData as Profile);
-                        console.log("AuthProvider: Set profile state with fetched data:", profileData); // Log state change
-                    } catch (parseError) {
-                        console.error("AuthProvider: Error parsing profile JSON response:", parseError, "Body was:", responseBody);
-                        setProfile(null);
-                        console.log("AuthProvider: Set profile to null due to JSON parse error."); // Log state change
-                    }
-               }
+              // Handle case where no error but data is null (shouldn't happen with .single() unless RLS issue)
+              console.warn(`AuthProvider (Supabase Client): Profile data was null without error for user ${userId}.`);
+              setProfile(null);
+              console.log("AuthProvider: Set profile to null due to null data without error.");
           }
       } catch (catchError) {
-          console.error("AuthProvider: Caught exception during fetchProfile (direct fetch):", catchError);
+          console.error("AuthProvider (Supabase Client): Caught exception during fetchProfile:", catchError);
           setProfile(null);
-          console.log("AuthProvider: Set profile to null due to caught exception."); // Log state change
+          console.log("AuthProvider: Set profile to null due to caught exception.");
       }
   }, []); // End useCallback
 
@@ -152,14 +115,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                   console.log(`AuthProvider: Session details before fetch (V7) - User ID: ${profileUserId}, ExpiresIn: ${expiresIn}s`);
               } else {
                   console.log("AuthProvider: No session before fetch (V7).");
+                  // If session becomes null (logout), clear profile immediately
+                  setProfile(null);
               }
 
-              console.log(`AuthProvider: >>> Calling fetchProfile (direct fetch) for ${profileUserId} (V7)...`);
-              await fetchProfile(profileUserId, session);
-              console.log(`AuthProvider: <<< fetchProfile (direct fetch) call completed for ${profileUserId} (V7).`);
+              // Fetch profile only if there's a user ID
+              if (profileUserId) {
+                  console.log(`AuthProvider: >>> Calling fetchProfile (Supabase Client) for ${profileUserId} (V7)...`);
+                  await fetchProfile(profileUserId); // Pass only userId now
+                  console.log(`AuthProvider: <<< fetchProfile (Supabase Client) call completed for ${profileUserId} (V7).`);
+              } else {
+                  // Ensure profile is null if there's no user
+                  setProfile(null);
+              }
 
+
+              // --- MOVED Loading state update ---
+              // Set loading false only after the first successful auth state check (session or no session)
+              // AND profile fetch attempt is complete (or skipped if no user), regardless of profile success/failure.
               if (!initialCheckDone) {
-                  console.log("AuthProvider: Initial auth state processed, setting loading false (V7).");
+                  console.log("AuthProvider: Initial auth state processed (incl. profile fetch attempt), setting loading false (V7).");
                   setIsLoading(false);
                   initialCheckDone = true;
               }
@@ -172,15 +147,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           isMountedRef.current = false; // Set ref on unmount
           subscription.unsubscribe(); // Use original variable name
       };
+  // Added fetchProfile to dependency array as it's used inside
   }, [fetchProfile]); // Dependency array
 
   // signOut function
   const signOut = useCallback(async () => {
       console.log("AuthProvider: Signing out.");
-      setIsLoading(true);
+      setIsLoading(true); // Set loading true during sign out
+      setProfile(null); // Clear profile immediately on sign out action
+      setUser(null); // Clear user immediately
+      setSession(null); // Clear session immediately
       await supabase.auth.signOut();
-      router.push('/signin');
-  }, [router]);
+      // No need to push here, onAuthStateChange will trigger and middleware/redirector will handle it
+      // router.push('/signin');
+      setIsLoading(false); // Set loading false after sign out completes
+  }, []); // Removed router dependency
 
   // Memoized context value
   // Ignore exhaustive-deps warning if needed
@@ -192,6 +173,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       signOut,
       isLoading
   }), [user, session, profile, signOut, isLoading]); // Dependencies are correct
+
+  // --- REMOVED: Effect for handling redirects ---
 
   return (
       <AuthContext.Provider value={value}>
