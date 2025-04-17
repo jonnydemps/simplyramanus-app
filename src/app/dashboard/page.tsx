@@ -122,7 +122,7 @@ export default function CustomerDashboard() {
         <div className="text-center py-12 bg-white rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-2">No formulations found</h2>
           <p className="text-gray-600 mb-6">
-            You haven't submitted any formulations yet. Get started by uploading your first formulation.
+            You have not submitted any formulations yet. Get started by uploading your first formulation.
           </p>
           <Link
             href="/formulations/upload"
