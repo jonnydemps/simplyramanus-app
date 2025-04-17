@@ -73,14 +73,16 @@ export async function middleware(req: NextRequest) {
   // --- ADDED: Redirect AUTHENTICATED users trying to access auth pages ---
   // If user is logged in and tries to go to signin/signup, redirect them away.
   if (user && isAuthPage) {
+    console.log(`Middleware: DETECTED authenticated user (ID: ${user.id}) on auth page (${pathname}). Preparing redirect...`); // ADDED Log
     // Simplified: Redirect all logged-in users to dashboard for now.
     // Later, could add profile fetch here to redirect admins to /admin if needed,
     // but that adds latency to the middleware. Client-side check might be better for role-based.
     const targetPath = '/dashboard';
-    console.log(`Middleware: Authenticated user accessing auth page ${pathname}, redirecting to ${targetPath}`);
-    const url = req.nextUrl.clone();
-    url.pathname = targetPath;
-    return NextResponse.redirect(url);
+    const redirectUrl = req.nextUrl.clone(); // Renamed variable for clarity
+    redirectUrl.pathname = targetPath;
+    console.log(`Middleware: Redirect URL calculated: ${redirectUrl.toString()}`); // ADDED Log
+    console.log(`Middleware: Executing NextResponse.redirect to ${targetPath}...`); // ADDED Log
+    return NextResponse.redirect(redirectUrl); // Use renamed variable
   }
   // --- END ADDED ---
 
