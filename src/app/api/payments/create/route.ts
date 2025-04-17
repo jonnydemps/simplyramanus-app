@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createServerActionClient } from '@/lib/supabase'; // Use server action client
 // Removed static import: import { createPaymentIntent } from '@/lib/stripe';
-import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
+  const supabase = createServerActionClient(); // Create server client instance
+
   try {
-    // Get the current user
+    // Get the current user session using the server client
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {

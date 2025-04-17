@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase'; // Use new client creator
 import { Database } from '@/lib/database.types';
 // import Link from 'next/link'; // REMOVED - Not used in simplified version
 
@@ -15,6 +15,7 @@ interface PageProps {
 }
 
 export default function FormulationDetails({ params }: PageProps) {
+  const supabase = createClient(); // Create client instance
   const [formulation, setFormulation] = useState<Formulation | null>(null);
   // const [ingredients, setIngredients] = useState<Ingredient[]>([]); // REMOVED - Not used
   const [loading, setLoading] = useState(true);

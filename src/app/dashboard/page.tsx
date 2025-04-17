@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase'; // Use new client creator
 import { Database } from '@/lib/database.types';
 import Link from 'next/link'; // Import Link
 
@@ -9,6 +9,7 @@ import Link from 'next/link'; // Import Link
 type Formulation = Database['public']['Tables']['formulations']['Row'];
 
 export default function CustomerDashboard() {
+  const supabase = createClient(); // Create client instance
   const [formulations, setFormulations] = useState<Formulation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +60,7 @@ export default function CustomerDashboard() {
     };
 
     fetchFormulations();
-  }, [filter]);
+  }, [filter, supabase]); // Added supabase to dependency array
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -122,7 +123,7 @@ export default function CustomerDashboard() {
         <div className="text-center py-12 bg-white rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-2">No formulations found</h2>
           <p className="text-gray-600 mb-6">
-            You have not submitted any formulations yet. Get started by uploading your first formulation.
+            You haven't submitted any formulations yet. Get started by uploading your first formulation.
           </p>
           <Link
             href="/formulations/upload"

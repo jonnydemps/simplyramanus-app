@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase'; // Use new client creator
 import Link from 'next/link';
 
 export default function SignInForm() {
+  const supabase = createClient(); // Create client instance
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);

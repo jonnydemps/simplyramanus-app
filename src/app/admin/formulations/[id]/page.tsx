@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase'; // Use new client creator
 import { Database } from '@/lib/database.types';
 import Link from 'next/link'; // Added Link import based on JSX usage
 
@@ -19,6 +19,7 @@ interface FormulationReviewProps {
 }
 
 export default function FormulationReview({ params }: FormulationReviewProps) {
+  const supabase = createClient(); // Create client instance
   // Use the corrected component-specific type for state
   const [formulation, setFormulation] = useState<FormulationWithPartialProfile | null>(null);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);

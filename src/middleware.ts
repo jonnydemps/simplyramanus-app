@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server'; // Combined imports
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 export async function middleware(req: NextRequest) {
@@ -20,7 +19,7 @@ export async function middleware(req: NextRequest) {
     },
   });
 
-  // Initialize client (will fail if env vars are truly missing and '!' causes error)
+  // Create supabase client specific to this middleware request
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -30,19 +29,23 @@ export async function middleware(req: NextRequest) {
           return req.cookies.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
+          // If the cookie is updated, update the cookies for the request and response
+          req.cookies.set({ name, value, ...options });
           response.cookies.set({ name, value, ...options });
         },
         remove(name: string, options: CookieOptions) {
+          // If the cookie is removed, update the cookies for the request and response
+          req.cookies.set({ name, value: '', ...options });
           response.cookies.set({ name, value: '', ...options });
         },
       },
     }
   );
 
-  // Refresh session to ensure auth state is fresh for the server context
-  await supabase.auth.getSession();
+  // No need to explicitly refresh session here, getSession handles it if needed by ssr helper
+  // await supabase.auth.getSession();
 
-  // Now get the session data again after refresh
+  // Get session data using the middleware-specific client
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
 
