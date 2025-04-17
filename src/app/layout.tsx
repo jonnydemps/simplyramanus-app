@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth/AuthProvider";
-// import AuthRedirector from '@/components/auth/AuthRedirector'; // REMOVED - Middleware handles redirects
+import AuthRedirector from '@/components/auth/AuthRedirector'; // Re-added
 
 const inter = Inter({
   variable: "--font-geist-sans", // Ensure these variable names are used in your CSS (e.g., Tailwind config)
@@ -29,8 +29,10 @@ export default function RootLayout({
       {/* Combine font variables and any other base body classes */}
       <body className={`${inter.variable} ${robotoMono.variable} antialiased`}>
         <AuthProvider>
-          {/* REMOVED AuthRedirector wrapper */}
-          {children}
+          {/* Re-added AuthRedirector wrapper */}
+          <AuthRedirector>
+            {children}
+          </AuthRedirector>
         </AuthProvider>
       </body>
     </html>
