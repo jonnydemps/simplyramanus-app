@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react'; // Removed useEffect
-// import { useRouter } from 'next/navigation'; // Removed - Navigation handled by middleware
+import { useState, useEffect } from 'react'; // Re-added useEffect
+import { useRouter } from 'next/navigation'; // Re-added useRouter
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link'; // Keep Link for other links
 
 export default function SignInForm() {
-  // const router = useRouter(); // Removed - Navigation handled by middleware
+  const router = useRouter(); // Re-added router
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -67,8 +67,36 @@ export default function SignInForm() {
     }
   };
 
-  // --- REMOVED: Effect for automatic redirect ---
-  // AuthRedirector now handles redirects away from signin page
+  // --- ADDED: Effect for redirect on successful login ---
+  useEffect(() => {
+    if (loginSuccess) {
+      const performRedirect = async () => {
+        // Need to get user ID again, or ideally from context if available synchronously
+        const { data: { user } } = await supabase.auth.getUser(); // Get current user session
+
+        if (user) {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles').select('is_admin').eq('id', user.id).single();
+
+          let isAdmin = false;
+          if (profileError) {
+              console.error("SignInForm Redirect Effect: Error fetching admin status:", profileError.message);
+          } else if (profileData?.is_admin) {
+              isAdmin = true;
+          }
+
+          const targetPath = isAdmin ? '/admin' : '/dashboard';
+          console.log(`SignInForm Redirect Effect: Navigating to ${targetPath}...`);
+          router.push(targetPath);
+        } else {
+          console.error("SignInForm Redirect Effect: No user found after login success state.");
+          // Fallback redirect if user somehow disappears
+          router.push('/dashboard');
+        }
+      };
+      performRedirect();
+    }
+  }, [loginSuccess, router]); // Depend on loginSuccess and router
 
   // --- JSX ---
   return (

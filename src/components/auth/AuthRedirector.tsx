@@ -45,15 +45,8 @@ export default function AuthRedirector({ children }: { children: React.ReactNode
     // the initial auth state is resolved (isLoading is false).
     console.log(`AuthRedirector: State check - isLoading=${isLoading}, user=${!!user}, profile=${!!profile}`);
 
-    // --- ADDED: Client-side redirect logic ---
-    // Redirect authenticated users away from auth pages
-    if (user && profile && (pathname === '/signin' || pathname === '/signup')) {
-      const isAdmin = profile.is_admin === true;
-      const targetPath = isAdmin ? '/admin' : '/dashboard';
-      console.log(`AuthRedirector: Redirecting authenticated ${isAdmin ? 'admin' : 'user'} from ${pathname} to ${targetPath}...`);
-      router.push(targetPath);
-      return; // Prevent further execution in this effect run after redirect starts
-    }
+    // --- REMOVED: Client-side redirect logic is now handled in SignInForm useEffect ---
+    // if (user && profile && (pathname === '/signin' || pathname === '/signup')) { ... }
 
     // --- REMOVED: Middleware handles redirecting unauthenticated users TO auth pages ---
     // if (!user && !publicPaths.includes(pathname)) { ... }
