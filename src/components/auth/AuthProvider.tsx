@@ -118,8 +118,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               if (session) {
                   // Fetch profile only if session exists and user ID is present
                   if (profileUserId) {
-                      console.log(`AuthProvider: Auth state change triggered fetchProfile for ${profileUserId}.`);
+                      console.log(`AuthProvider: >>> Calling fetchProfile for ${profileUserId} (from onAuthStateChange)...`); // Added Log
                       await fetchProfile(profileUserId);
+                      console.log(`AuthProvider: <<< fetchProfile call completed for ${profileUserId} (from onAuthStateChange).`); // Added Log
                   } else {
                       console.log("AuthProvider: Auth state change - session exists but no user ID, clearing profile.");
                       setProfile(null);
@@ -140,15 +141,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       // Initial check in case the listener doesn't fire immediately
       // Use stable client instance
-      supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      supabaseClient.auth.getSession().then(async ({ data: { session } }) => { // Made async
           if (!initialCheckDone) {
               console.log("AuthProvider: Initial getSession check completed.", session ? "Got session" : "No session");
               setSession(session);
               setUser(session?.user ?? null);
               const profileUserId = session?.user?.id;
               if (profileUserId) {
-                  console.log(`AuthProvider: Initial getSession triggered fetchProfile for ${profileUserId}.`);
-                  fetchProfile(profileUserId);
+                  console.log(`AuthProvider: >>> Calling fetchProfile for ${profileUserId} (from initial getSession)...`); // Added Log
+                  await fetchProfile(profileUserId);
+                  console.log(`AuthProvider: <<< fetchProfile call completed for ${profileUserId} (from initial getSession).`); // Added Log
               } else {
                   console.log("AuthProvider: Initial getSession - no user ID, clearing profile.");
                   setProfile(null);
