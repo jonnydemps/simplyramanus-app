@@ -61,36 +61,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update formulation with payment ID
-    const { error: updateError } = await supabase
-      .from('formulations')
-      .update({
-        // Ensure your database schema has 'payment_id' or adjust field name
-        payment_id: paymentIntent.id,
-      })
-      .eq('id', formulationId);
-
-    if (updateError) {
-      console.error('Formulation update error:', updateError);
-      // Decide if you should stop or continue if this fails
-    }
-
     // Create a payment record in your 'payments' table
-    const { error: paymentError } = await supabase
+    const { data: paymentRecord, error: paymentError } = await supabase
       .from('payments')
       .insert({
         user_id: userId,
         formulation_id: formulationId,
         amount: amount, // Ensure 'amount' from body is correct unit/type
         currency: currency,
-        // Ensure your schema has 'stripe_payment_id' or adjust
-        stripe_payment_id: paymentIntent.id,
-        status: 'pending', // Or 'succeeded' if appropriate here
-      });
+        stripe_payment_intent_id: paymentIntent.id, // Corrected field name
+        status: 'pending', // Set initial status
+      })
+      .select() // Select the created record to confirm
+      .single(); // Expecting a single record
 
-    if (paymentError) {
+    if (paymentError || !paymentRecord) {
       console.error('Payment record creation error:', paymentError);
-      // Decide if you should stop or continue
+      // Consider rolling back or logging the failure more robustly
+      return NextResponse.json(
+        { message: 'Failed to record payment details.' },
+        { status: 500 }
+      );
+    }
+
+    // Optionally: Update the formulation status to indicate payment is pending
+    const { error: formulationUpdateError } = await supabase
+      .from('formulations')
+      .update({ payment_status: 'pending' })
+      .eq('id', formulationId);
+
+    if (formulationUpdateError) {
+      console.warn('Failed to update formulation payment status:', formulationUpdateError);
+      // Log this, but likely continue as the payment intent is created
     }
 
     return NextResponse.json({
