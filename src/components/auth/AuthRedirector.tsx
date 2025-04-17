@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react'; // Added useState
 import { useAuth } from '@/components/auth/AuthProvider'; // Adjust path if needed
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -7,6 +7,8 @@ export default function AuthRedirector({ children }: { children: React.ReactNode
   const { user, profile, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [shouldRedirect, setShouldRedirect] = useState(false);
+  const [redirectPath, setRedirectPath] = useState<string | null>(null);
 
   useEffect(() => {
     console.log(`AuthRedirector Effect RUN: isLoading=${isLoading}, user=${!!user}, profile=${!!profile}, isAdmin=${profile?.is_admin ?? 'N/A'}, path=${pathname}`);
@@ -29,13 +31,22 @@ export default function AuthRedirector({ children }: { children: React.ReactNode
     if (user && profile && (pathname === '/signin' || pathname === '/signup')) {
       const isAdmin = profile.is_admin === true;
       const targetPath = isAdmin ? '/admin' : '/dashboard';
-      console.log(`AuthRedirector: Replacing URL for authenticated ${isAdmin ? 'admin' : 'user'} from ${pathname} to ${targetPath}...`);
-      router.replace(targetPath); // Use replace
-      return; // Prevent potential duplicate runs if state updates rapidly
+      console.log(`AuthRedirector: Setting state to trigger redirect for authenticated ${isAdmin ? 'admin' : 'user'} from ${pathname} to ${targetPath}...`);
+      setRedirectPath(targetPath);
+      setShouldRedirect(true);
+      // No direct navigation call here anymore
     }
 
   // Dependencies ensure effect runs when state resolves or path changes
-  }, [isLoading, user, profile, pathname, router]);
+  }, [isLoading, user, profile, pathname]); // Removed router from this effect's dependencies
+
+  // New effect to handle the actual navigation when shouldRedirect becomes true
+  useEffect(() => {
+    if (shouldRedirect && redirectPath) {
+      console.log(`AuthRedirector: Executing redirect navigation to ${redirectPath}...`);
+      router.replace(redirectPath);
+    }
+  }, [shouldRedirect, redirectPath, router]);
 
   // Render loading indicator OR children
   // AuthProvider also renders a loading state, but this ensures nothing renders until redirect logic runs
@@ -50,6 +61,10 @@ export default function AuthRedirector({ children }: { children: React.ReactNode
       return <div>Loading Profile...</div>; // Indicate profile loading specifically
   }
 
+  // If redirect state is set, show redirecting message (navigation happens in the effect above)
+  if (shouldRedirect) {
+      return <div>Redirecting...</div>;
+  }
 
   return <>{children}</>;
 }
