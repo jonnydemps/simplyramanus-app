@@ -145,9 +145,9 @@ export default function FormulationDetails({ params }: PageProps) {
         <div className="space-y-3">
           <div><span className="font-medium text-gray-700">Name:</span> {formulation.name}</div>
           <div><span className="font-medium text-gray-700">Product Type:</span> {formulation.product_type}</div>
-          <div><span className="font-medium text-gray-700">Submitted:</span> {new Date(formulation.created_at).toLocaleString()}</div>
-          <div><span className="font-medium text-gray-700">Status:</span> {formulation.status}</div>
-          <div><span className="font-medium text-gray-700">Payment:</span> {formulation.payment_status}</div>
+          <div><span className="font-medium text-gray-700">Submitted:</span> {formulation.created_at ? new Date(formulation.created_at).toLocaleString() : 'N/A'}</div>
+          <div><span className="font-medium text-gray-700">Status:</span> {formulation.status ?? 'N/A'}</div>
+          <div><span className="font-medium text-gray-700">Payment:</span> {formulation.payment_status ?? 'N/A'}</div>
           {formulation.description && (
              <div><span className="font-medium text-gray-700">Description:</span> {formulation.description}</div>
            )}
