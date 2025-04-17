@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { handleWebhookEvent } from '@/lib/stripe'; // handleWebhookEvent likely doesn't need stripe instance itself
-import { supabase } from '@/lib/supabase';
+import { createServerActionClient } from '@/lib/supabase/server'; // Corrected import path
 
 // REMOVED: Top-level Stripe initialization removed from here
 // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 // });
 
 export async function POST(request: NextRequest) {
+  const supabase = createServerActionClient(); // Create server client instance
   try {
     const body = await request.text();
     const signature = request.headers.get('stripe-signature') || '';
@@ -55,7 +56,9 @@ export async function POST(request: NextRequest) {
         .update({
           payment_status: 'paid',
         })
-        .eq('payment_id', paymentIntent.id); // Ensure 'payment_id' column exists and is correct
+        // Corrected: Update formulation based on its ID, not a payment ID column
+        // Assuming paymentIntent metadata contains formulationId
+        .eq('id', paymentIntent.metadata.formulationId);
 
       if (formulationError) {
         console.error('Formulation update error on success:', formulationError);
@@ -68,7 +71,8 @@ export async function POST(request: NextRequest) {
         .update({
           status: 'succeeded', // Use 'succeeded' or 'completed' consistently
         })
-        .eq('stripe_payment_id', paymentIntent.id);
+        // Corrected: Use the correct column name for the Stripe Payment Intent ID
+        .eq('stripe_payment_intent_id', paymentIntent.id);
 
       if (paymentError) {
         console.error('Payment record update error on success:', paymentError);
@@ -81,7 +85,8 @@ export async function POST(request: NextRequest) {
         .update({
           status: 'failed',
         })
-        .eq('stripe_payment_id', paymentIntent.id);
+        // Corrected: Use the correct column name for the Stripe Payment Intent ID
+        .eq('stripe_payment_intent_id', paymentIntent.id);
 
       if (paymentError) {
         console.error('Payment record update error on failure:', paymentError);
