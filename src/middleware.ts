@@ -63,6 +63,33 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // --- ADDED: Redirect logged-in users away from auth pages ---
+  if (user && (pathname === '/signin' || pathname === '/signup')) {
+    console.log(`Middleware: User is authenticated, accessing auth path ${pathname}. Checking role...`);
+    // Fetch profile to determine role
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) {
+      console.error(`Middleware: Error fetching profile for redirect: ${profileError.message}`);
+      // Fallback: redirect to dashboard if profile fetch fails
+      const url = req.nextUrl.clone();
+      url.pathname = '/dashboard';
+      return NextResponse.redirect(url);
+    }
+
+    const isAdmin = profileData?.is_admin === true;
+    const redirectPath = isAdmin ? '/admin' : '/dashboard';
+    console.log(`Middleware: Redirecting authenticated ${isAdmin ? 'admin' : 'user'} from ${pathname} to ${redirectPath}`);
+    const url = req.nextUrl.clone();
+    url.pathname = redirectPath;
+    return NextResponse.redirect(url);
+  }
+  // --- END ADDED ---
+
   console.log(`Middleware: Allowing request to proceed for path ${pathname}. User authenticated: ${!!user}`);
   // Allow all other requests through
   return response;
