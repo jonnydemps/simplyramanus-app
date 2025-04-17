@@ -18,32 +18,32 @@ export default function CustomerDashboard() {
     const fetchFormulations = async () => {
       try {
         setLoading(true);
-        
+
         // Get the current user
         const { data: { user } } = await supabase.auth.getUser();
-        
+
         if (!user) {
           throw new Error('User not authenticated');
         }
-        
+
         // Fetch formulations for the current user
         let query = supabase
           .from('formulations')
           .select(`*`) // Removed join with non-existent 'reports' table
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
-        
+
         // Apply filters
         if (filter !== 'all') {
           query = query.eq('status', filter);
         }
-        
+
         const { data, error } = await query;
-        
+
         if (error) {
           throw error;
         }
-        
+
         setFormulations(data || []);
       } catch (err: unknown) {
         let message = 'Failed to fetch formulations';
@@ -57,7 +57,7 @@ export default function CustomerDashboard() {
         setLoading(false);
       }
     };
-    
+
     fetchFormulations();
   }, [filter]);
 
@@ -79,13 +79,13 @@ export default function CustomerDashboard() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">My Formulations</h1>
-      
+
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
           {error}
         </div>
       )}
-      
+
       <div className="flex justify-between items-center mb-6">
         <div>
           <label htmlFor="filter" className="block text-sm font-medium text-gray-700 mb-1">
@@ -104,7 +104,7 @@ export default function CustomerDashboard() {
             <option value="rejected">Rejected</option>
           </select>
         </div>
-        
+
         <Link
           href="/formulations/upload"
           className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -112,7 +112,7 @@ export default function CustomerDashboard() {
           Upload New Formulation
         </Link>
       </div>
-      
+
       {loading ? (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -122,7 +122,7 @@ export default function CustomerDashboard() {
         <div className="text-center py-12 bg-white rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-2">No formulations found</h2>
           <p className="text-gray-600 mb-6">
-            You haven&apos;t submitted any formulations yet. Get started by uploading your first formulation.
+            You haven't submitted any formulations yet. Get started by uploading your first formulation.
           </p>
           <Link
             href="/formulations/upload"
@@ -141,18 +141,18 @@ export default function CustomerDashboard() {
                   {/* Removed description as it's not in schema */}
                   Product Type: {formulation.product_type}
                 </p>
-                
+
                 <div className="flex justify-between items-center mb-4">
                   <div>
-                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeClass(formulation.status)}`}>
-                      {formulation.status.replace('_', ' ')}
+                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeClass(formulation.status ?? 'unknown')}`}>
+                      {(formulation.status ?? 'Unknown').replace('_', ' ')}
                     </span>
                   </div>
                   <div className="text-sm text-gray-500">
-                    {new Date(formulation.created_at).toLocaleDateString()}
+                    {formulation.created_at ? new Date(formulation.created_at).toLocaleDateString() : 'N/A'}
                   </div>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <div>
                     <span className={`px-2 py-1 rounded-full text-xs ${formulation.payment_status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
@@ -166,7 +166,7 @@ export default function CustomerDashboard() {
                     View Details
                   </Link>
                 </div>
-                
+
                 {/* Removed Report Available section as 'reports' table doesn't exist */}
               </div>
             </div>
