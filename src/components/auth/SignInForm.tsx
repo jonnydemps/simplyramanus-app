@@ -1,18 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react'; // Re-added useEffect
-import { useRouter } from 'next/navigation'; // Re-added useRouter
+import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import Link from 'next/link'; // Keep Link for other links
+import Link from 'next/link';
 
 export default function SignInForm() {
-  const router = useRouter(); // Re-added router
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
-  // const [redirectPath, setRedirectPath] = useState('/dashboard'); // No longer needed here
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,26 +29,8 @@ export default function SignInForm() {
 
       if (data?.user) {
         console.log("SignInForm: Sign in API successful for user:", data.user.id);
-        // REMOVED: Admin check is not needed here as middleware handles role-based redirects
-        // const { data: profileData, error: profileError } = await supabase
-        //   .from('profiles').select('is_admin').eq('id', data.user.id).single();
-        //
-        // let isAdmin = false; // Default to non-admin
-        // if (profileError) {
-        //     console.error("SignInForm: Error fetching admin status:", profileError.message);
-        // } else if (profileData?.is_admin) {
-        //     console.log("SignInForm: User is admin.");
-        //     isAdmin = true;
-        // } else {
-        //     console.log("SignInForm: User is not admin.");
-        // }
-
-        // Set success state first
+        // Set success state - Redirect is handled elsewhere (AuthRedirector)
         setLoginSuccess(true);
-        // REMOVED: Navigation is now handled by middleware based on auth state change
-        // console.log(`SignInForm: Login success (isAdmin=${isAdmin}), navigating directly to ${targetPath}...`);
-        // router.push(targetPath);
-
       } else {
          console.error("SignInForm: Sign in succeeded but no user data found.");
          setError("Sign in succeeded but failed to retrieve user data.");
@@ -67,36 +46,7 @@ export default function SignInForm() {
     }
   };
 
-  // --- ADDED: Effect for redirect on successful login ---
-  useEffect(() => {
-    if (loginSuccess) {
-      const performRedirect = async () => {
-        // Need to get user ID again, or ideally from context if available synchronously
-        const { data: { user } } = await supabase.auth.getUser(); // Get current user session
-
-        if (user) {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles').select('is_admin').eq('id', user.id).single();
-
-          let isAdmin = false;
-          if (profileError) {
-              console.error("SignInForm Redirect Effect: Error fetching admin status:", profileError.message);
-          } else if (profileData?.is_admin) {
-              isAdmin = true;
-          }
-
-          const targetPath = isAdmin ? '/admin' : '/dashboard';
-          console.log(`SignInForm Redirect Effect: Navigating to ${targetPath}...`);
-          router.push(targetPath);
-        } else {
-          console.error("SignInForm Redirect Effect: No user found after login success state.");
-          // Fallback redirect if user somehow disappears
-          router.push('/dashboard');
-        }
-      };
-      performRedirect();
-    }
-  }, [loginSuccess, router]); // Depend on loginSuccess and router
+  // --- NO useEffect for redirect here ---
 
   // --- JSX ---
   return (
@@ -124,7 +74,7 @@ export default function SignInForm() {
               {/* Links */}
               <div className="flex items-center justify-between">
                 <div className="text-sm"><Link href="/reset-password" className="font-medium text-blue-600 hover:text-blue-500">Forgot your password?</Link></div>
-                <div className="text-sm"><Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">Don&apos;t have an account? Sign up</Link></div>
+                <div className="text-sm"><Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">Don't have an account? Sign up</Link></div>
               </div>
 
               {/* Submit Button */}
@@ -136,17 +86,14 @@ export default function SignInForm() {
             </form>
           </>
         ) : (
-          // --- Success Message with automatic redirect ---
+          // --- Success Message ---
           <div>
             <h2 className="mt-6 text-center text-2xl font-bold text-green-700">
               Sign In Successful!
             </h2>
             <p className="mt-2 text-center text-sm text-gray-600">
               You will be redirected shortly.
-              {/* Removed dynamic path display */}
             </p>
-            {/* --- REMOVED: Manual redirect button --- */}
-            {/* AuthRedirector handles the redirect automatically */}
           </div>
         )}
 
