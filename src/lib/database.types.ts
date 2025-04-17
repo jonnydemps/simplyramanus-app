@@ -6,282 +6,259 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
-      // --- comments Table (Reconstructed - VERIFY FK NAMES) ---
       comments: {
         Row: {
-          id: string
-          formulation_id: string
-          user_id: string // FK to profiles.id
           content: string
           created_at: string | null
+          formulation_id: string
+          id: string
           updated_at: string | null
+          user_id: string
         }
         Insert: {
-          id?: string
-          formulation_id: string
-          user_id: string
           content: string
           created_at?: string | null
+          formulation_id: string
+          id?: string
           updated_at?: string | null
+          user_id: string
         }
         Update: {
-          id?: string
-          formulation_id?: string
-          user_id?: string
           content?: string
           created_at?: string | null
+          formulation_id?: string
+          id?: string
           updated_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "comments_formulation_id_fkey" // CHECK ACTUAL FK NAME!
+            foreignKeyName: "comments_formulation_id_fkey"
             columns: ["formulation_id"]
             isOneToOne: false
             referencedRelation: "formulations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "comments_user_id_fkey" // CHECK ACTUAL FK NAME!
+            foreignKeyName: "comments_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          }
+          },
         ]
-      }, // <<< Comma between tables
-
-      // --- formulations Table (As provided, added Relationships - VERIFY FK NAMES) ---
+      }
       formulations: {
         Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          name: string
-          product_type: string
-          user_id: string // FK referencing profiles.id
+          created_at: string | null
           description: string | null
-          status: string
-          payment_status: string
-          payment_id: string | null
-          original_file_name: string | null
           file_path: string | null
+          id: string
+          name: string
+          original_file_name: string | null
+          payment_status: string | null
+          product_type: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
         }
         Insert: {
-          id?: string
           created_at?: string | null
-          updated_at?: string | null
-          name: string
-          product_type: string
-          user_id: string
           description?: string | null
-          status?: string
-          payment_status?: string
-          payment_id?: string | null
-          original_file_name?: string | null
           file_path?: string | null
+          id?: string
+          name: string
+          original_file_name?: string | null
+          payment_status?: string | null
+          product_type: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
         }
         Update: {
-          id?: string
           created_at?: string | null
-          updated_at?: string | null
-          name?: string
-          product_type?: string
-          user_id?: string
           description?: string | null
-          status?: string
-          payment_status?: string
-          payment_id?: string | null
-          original_file_name?: string | null
           file_path?: string | null
+          id?: string
+          name?: string
+          original_file_name?: string | null
+          payment_status?: string | null
+          product_type?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "formulations_user_id_fkey" // CHECK ACTUAL FK NAME!
+            foreignKeyName: "formulations_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          }
-          // Add relationship to payments if needed, check FK name
+          },
         ]
-      }, // <<< Comma between tables
-
-      // --- ingredients Table (As provided, added Relationships - VERIFY FK NAMES) ---
+      }
       ingredients: {
         Row: {
-          id: string
-          formulation_id: string
-          inci_name: string
           cas_number: string | null
-          function: string | null
           concentration: number
           created_at: string | null
+          formulation_id: string
+          function: string | null
+          id: string
+          inci_name: string
           updated_at: string | null
         }
         Insert: {
-          id?: string
-          formulation_id: string
-          inci_name: string
           cas_number?: string | null
-          function?: string | null
           concentration: number
           created_at?: string | null
+          formulation_id: string
+          function?: string | null
+          id?: string
+          inci_name: string
           updated_at?: string | null
         }
         Update: {
-          id?: string
-          formulation_id?: string
-          inci_name?: string
           cas_number?: string | null
-          function?: string | null
           concentration?: number
           created_at?: string | null
+          formulation_id?: string
+          function?: string | null
+          id?: string
+          inci_name?: string
           updated_at?: string | null
         }
         Relationships: [
-         {
-            foreignKeyName: "ingredients_formulation_id_fkey" // CHECK ACTUAL!
+          {
+            foreignKeyName: "ingredients_formulation_id_fkey"
             columns: ["formulation_id"]
             isOneToOne: false
             referencedRelation: "formulations"
             referencedColumns: ["id"]
-          }
+          },
         ]
-      }, // <<< Comma between tables
-
-      // --- payments Table (Reconstructed - VERIFY FK NAMES) ---
+      }
       payments: {
-         Row: {
-            id: string
-            formulation_id: string
-            user_id: string // FK to profiles.id
-            amount: number
-            currency: string | null
-            status: string
-            stripe_payment_intent_id: string | null
-            created_at: string | null
-            updated_at: string | null
-         }
-         Insert: {
-            id?: string
-            formulation_id: string
-            user_id: string
-            amount: number
-            currency?: string | null
-            status?: string
-            stripe_payment_intent_id?: string | null
-            created_at?: string | null
-            updated_at?: string | null
-         }
-         Update: {
-            id?: string
-            formulation_id?: string
-            user_id?: string
-            amount?: number
-            currency?: string | null
-            status?: string
-            stripe_payment_intent_id?: string | null
-            created_at?: string | null
-            updated_at?: string | null
-         }
-         Relationships: [
-           {
-             foreignKeyName: "payments_formulation_id_fkey" // CHECK ACTUAL!
-             columns: ["formulation_id"]
-             isOneToOne: false
-             referencedRelation: "formulations"
-             referencedColumns: ["id"]
-           },
-           {
-             foreignKeyName: "payments_user_id_fkey" // CHECK ACTUAL!
-             columns: ["user_id"]
-             isOneToOne: false
-             referencedRelation: "profiles"
-             referencedColumns: ["id"]
-           }
-         ]
-      }, // <<< Comma between tables
-
-      // --- CORRECTED profiles DEFINITION ---
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string | null
+          formulation_id: string
+          id: string
+          status: string | null
+          stripe_payment_intent_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string | null
+          formulation_id: string
+          id?: string
+          status?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string | null
+          formulation_id?: string
+          id?: string
+          status?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_formulation_id_fkey"
+            columns: ["formulation_id"]
+            isOneToOne: false
+            referencedRelation: "formulations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
-          id: string
           company_name: string
           contact_email: string
           contact_phone: string | null
           created_at: string | null
-          updated_at: string | null
+          id: string
           is_admin: boolean | null
+          updated_at: string | null
         }
         Insert: {
-          id: string
           company_name: string
           contact_email: string
           contact_phone?: string | null
           created_at?: string | null
-          updated_at?: string | null
+          id: string
           is_admin?: boolean | null
+          updated_at?: string | null
         }
         Update: {
-          id?: string
           company_name?: string
           contact_email?: string
           contact_phone?: string | null
           created_at?: string | null
-          updated_at?: string | null
+          id?: string
           is_admin?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          content: string
+          created_at: string | null
+          formulation_id: string
+          id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          formulation_id: string
+          id?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          formulation_id?: string
+          id?: string
+          title?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "profiles_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "users"
+            foreignKeyName: "reports_formulation_id_fkey"
+            columns: ["formulation_id"]
+            isOneToOne: false
+            referencedRelation: "formulations"
             referencedColumns: ["id"]
-          }
+          },
         ]
-      }, // <<< Comma between tables
-
-      // --- reports Table (Reconstructed - VERIFY FK NAMES) ---
-      reports: {
-          Row: {
-            id: string
-            formulation_id: string
-            title: string
-            content: string
-            created_at: string | null
-            updated_at: string | null
-          }
-          Insert: {
-            id?: string
-            formulation_id: string
-            title: string
-            content: string
-            created_at?: string | null
-            updated_at?: string | null
-          }
-          Update: {
-            id?: string
-            formulation_id?: string
-            title?: string
-            content?: string
-            created_at?: string | null
-            updated_at?: string | null
-          }
-          Relationships: [
-            {
-              foreignKeyName: "reports_formulation_id_fkey" // CHECK ACTUAL!
-              columns: ["formulation_id"]
-              isOneToOne: false
-              referencedRelation: "formulations"
-              referencedColumns: ["id"]
-            }
-          ]
-      } // <<< No comma needed as this is the last table definition
-    } // End Tables
+      }
+    }
     Views: {
       [_ in never]: never
     }
@@ -294,29 +271,32 @@ export interface Database {
     CompositeTypes: {
       [_ in never]: never
     }
-  } // End public
-} // End Database interface
+  }
+}
 
-// --- CORRECTED Standard helper types ---
+type DefaultSchema = Database[Extract<keyof Database, "public">]
+
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (Database["public"]["Tables"] & Database["public"]["Views"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (Database["public"]["Tables"] &
-        Database["public"]["Views"])
-    ? (Database["public"]["Tables"] &
-        Database["public"]["Views"])[PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -324,20 +304,22 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof Database["public"]["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof Database["public"]["Tables"]
-    ? Database["public"]["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -345,20 +327,22 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof Database["public"]["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof Database["public"]["Tables"]
-    ? Database["public"]["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -366,15 +350,37 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends // This is the correct variable for Enums
-    | keyof Database["public"]["Enums"]
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
     | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"] // Corrected variable name here
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName] // Correct variable name used
-  : PublicEnumNameOrOptions extends keyof Database["public"]["Enums"]
-    ? Database["public"]["Enums"][PublicEnumNameOrOptions] // Correct variable name used
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
-// --- End Corrected helper types ---
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof Database },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
