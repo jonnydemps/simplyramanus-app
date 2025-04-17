@@ -39,56 +39,38 @@ export async function middleware(req: NextRequest) {
     }
   );
 
-  // Always get session first to handle cookie operations
+  // Refresh session to ensure auth state is fresh for the server context
+  await supabase.auth.getSession();
+
+  // Now get the session data again after refresh
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
 
   const { pathname } = req.nextUrl;
 
-  // Define paths accessible without authentication
-  const isPublicPath =
-      pathname === '/' ||
+  // Define AUTH pages (where unauthenticated users SHOULD be allowed)
+  const isAuthPage =
       pathname.startsWith('/signin') ||
       pathname.startsWith('/signup') ||
       pathname.startsWith('/reset-password') ||
-      pathname === '/auth/callback' ||
-      pathname === '/favicon.ico' ||
-      pathname.startsWith('/api/webhooks/');
+      pathname === '/auth/callback';
 
-  // Only redirect if NOT logged in and accessing a non-public path
-  if (!user && !isPublicPath) {
+  // Define truly PUBLIC pages/assets (accessible to everyone, always)
+  const isPublicAsset =
+      pathname === '/' || // Allow homepage
+      pathname === '/favicon.ico' ||
+      pathname.startsWith('/api/webhooks/'); // Add other public assets/routes here
+
+  // Redirect UNAUTHENTICATED users trying to access PROTECTED pages
+  // Protected pages are anything NOT an auth page and NOT a public asset.
+  if (!user && !isAuthPage && !isPublicAsset) {
     console.log(`Middleware: No user detected, accessing protected path ${pathname}, redirecting to /signin`);
     const url = req.nextUrl.clone();
     url.pathname = '/signin';
     return NextResponse.redirect(url);
   }
 
-  // --- ADDED: Redirect logged-in users away from auth pages ---
-  if (user && (pathname === '/signin' || pathname === '/signup')) {
-    console.log(`Middleware: User is authenticated, accessing auth path ${pathname}. Checking role...`);
-    // Fetch profile to determine role
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError) {
-      console.error(`Middleware: Error fetching profile for redirect: ${profileError.message}`);
-      // Fallback: redirect to dashboard if profile fetch fails
-      const url = req.nextUrl.clone();
-      url.pathname = '/dashboard';
-      return NextResponse.redirect(url);
-    }
-
-    const isAdmin = profileData?.is_admin === true;
-    const redirectPath = isAdmin ? '/admin' : '/dashboard';
-    console.log(`Middleware: Redirecting authenticated ${isAdmin ? 'admin' : 'user'} from ${pathname} to ${redirectPath}`);
-    const url = req.nextUrl.clone();
-    url.pathname = redirectPath;
-    return NextResponse.redirect(url);
-  }
-  // --- END ADDED ---
+  // --- NOTE: Redirect logic for AUTHENTICATED users on auth pages is handled client-side by AuthProvider ---
 
   console.log(`Middleware: Allowing request to proceed for path ${pathname}. User authenticated: ${!!user}`);
   // Allow all other requests through
