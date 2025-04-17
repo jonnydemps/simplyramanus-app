@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react'; // Removed useEffect
-import { useRouter } from 'next/navigation'; // Re-added useRouter
+// import { useRouter } from 'next/navigation'; // Removed - Navigation handled by middleware
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link'; // Keep Link for other links
 
 export default function SignInForm() {
-  const router = useRouter(); // Get router instance
+  // const router = useRouter(); // Removed - Navigation handled by middleware
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -32,29 +32,25 @@ export default function SignInForm() {
 
       if (data?.user) {
         console.log("SignInForm: Sign in API successful for user:", data.user.id);
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles').select('is_admin').eq('id', data.user.id).single();
-
-        let isAdmin = false; // Default to non-admin
-        if (profileError) {
-            console.error("SignInForm: Error fetching admin status:", profileError.message);
-            // Keep isAdmin as false, redirect to dashboard
-        } else if (profileData?.is_admin) {
-            console.log("SignInForm: User is admin.");
-            isAdmin = true;
-        } else {
-            console.log("SignInForm: User is not admin.");
-            // Keep isAdmin as false
-        }
-
-        // Determine target path based on admin status
-        const targetPath = isAdmin ? '/admin' : '/dashboard';
+        // REMOVED: Admin check is not needed here as middleware handles role-based redirects
+        // const { data: profileData, error: profileError } = await supabase
+        //   .from('profiles').select('is_admin').eq('id', data.user.id).single();
+        //
+        // let isAdmin = false; // Default to non-admin
+        // if (profileError) {
+        //     console.error("SignInForm: Error fetching admin status:", profileError.message);
+        // } else if (profileData?.is_admin) {
+        //     console.log("SignInForm: User is admin.");
+        //     isAdmin = true;
+        // } else {
+        //     console.log("SignInForm: User is not admin.");
+        // }
 
         // Set success state first
         setLoginSuccess(true);
-        // Navigate directly to the correct destination
-        console.log(`SignInForm: Login success (isAdmin=${isAdmin}), navigating directly to ${targetPath}...`);
-        router.push(targetPath);
+        // REMOVED: Navigation is now handled by middleware based on auth state change
+        // console.log(`SignInForm: Login success (isAdmin=${isAdmin}), navigating directly to ${targetPath}...`);
+        // router.push(targetPath);
 
       } else {
          console.error("SignInForm: Sign in succeeded but no user data found.");
