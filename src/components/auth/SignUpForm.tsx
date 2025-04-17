@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client'; // Corrected import path
 import Link from 'next/link';
 
 export default function SignUpForm() {
+  const supabase = createClient(); // Create client instance
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [companyName, setCompanyName] = useState(''); // State for company name input
